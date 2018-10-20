@@ -1,9 +1,7 @@
 from space_ship_env import EnvironmentTutorial
 
 
-def tutorial_walk_through(success, env, steps, actions):
-
-    print("try to type a key from [a-z] to find out how to control the app, you have 10 chances to move your spaceship!")
+def simple_tasks(success, env, steps, actions):
 
     cur_state = env.start_state
     env.board_reset()
@@ -48,6 +46,8 @@ def tutorial_walk_through(success, env, steps, actions):
 
 
 def main():
+    print(
+        "try to type a key from [a-z] to find out how to control the app, you have 10 chances to move your spaceship!")
     success = False
     env = EnvironmentTutorial()
 
@@ -55,22 +55,22 @@ def main():
     # states = ((x, y) for x in range(board.shape[0]) for y in range(board.shape[1]))
     steps = 10
 
-    tutorial_walk_through(success, env, steps, actions)
+    simple_tasks(success, env, steps, actions)
+
+    while not success:
+        try_again = str(input("try again [y] or see the answer[n]"))
+        if try_again == "y":
+            success = simple_tasks(success, env, steps, actions)
+            # TODO: maybe call reward for trying out new things?
+        elif try_again == "n":
+            print("the answer: up: e, right t")
+            break
+        else:
+            raise ValueError
 
     if success:
         print("Now you can start the game!")
         # TODO: call game
-    else:
-        while True:
-            try_again = str(input("try again [y] or see the answer[n]"))
-            if try_again == "y":
-                tutorial_walk_through(success, env, steps, actions)
-                # TODO: maybe call reward for trying out new things?
-            elif try_again == "n":
-                print("the answer: up: e, right t")
-                break
-            else:
-                raise ValueError
 
 
 if __name__ == '__main__':
