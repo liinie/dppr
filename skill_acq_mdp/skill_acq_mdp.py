@@ -10,6 +10,18 @@ reward_nms1_imediate = 5
 reward_nms2_imediate = 5
 reward_nms1_determine = 10
 reward_nms2_determine = 10
+discount_factor = 0.9
+
+pr = False
+
+optimal_state_value = np.array([[14, 10], [10, 0]])
+print(optimal_state_value)
+
+
+def optimal_pseudo_reward(cur_state, action, discount_factor):
+    next_state, _ = step(cur_state, actions[action])
+    pseudo_reward = discount_factor*optimal_state_value[next_state] - optimal_state_value[cur_state]
+    return pseudo_reward
 
 
 def start_state(state):
@@ -39,7 +51,7 @@ def is_terminal(state):
 def step(state, action):
     if action == "ms":
         reward = reward_ms
-        next_state = (state)
+        next_state = state
 
     elif action == "nms1" and start_state(state):
         reward = reward_nms1_imediate
@@ -63,15 +75,17 @@ def step(state, action):
     return next_state, reward
 
 
-def expected_returns(state, action, state_value):
+def expected_returns(state, action, state_value, pr):
     i, j = state
     new_state_value = state_value.copy()
     (next_i, next_j), reward = step(state, actions[action])
-    new_state_value[i, j] = reward + new_state_value[next_i, next_j]
+    if pr:
+        reward += optimal_pseudo_reward(state, action, discount_factor)
+    new_state_value[i, j] = reward + discount_factor*new_state_value[next_i, next_j]
     return new_state_value[i, j]
 
 
-def policy_evaluation(policy):
+def policy_evaluation(policy, pr):
     state_value = np.zeros((2, 2))
     new_state_value = state_value.copy()
 
@@ -87,11 +101,14 @@ def policy_evaluation(policy):
 
             for action, action_prob in enumerate(policy[i]):
                 (next_i, next_j), reward = step(states[i], actions[action])
-                new_state_value[states[i]] += action_prob * (reward + new_state_value[next_i, next_j])
-
+                if pr:
+                    reward += optimal_pseudo_reward(states[i], action, discount_factor)
+                new_state_value[states[i]] += action_prob * (reward + discount_factor*state_value[next_i, next_j])
+        print(f"new state value: {new_state_value}")
+        print(f"state value: {state_value}")
         value_change = np.sum(np.abs(state_value - new_state_value))
         print("value_change in: {}".format(value_change))
-        if value_change < 1e-4:
+        if value_change < 1e-10:
             state_value = new_state_value.copy()
             break
 
@@ -121,7 +138,7 @@ def policy_iteration():
 
         policy_stable = True
 
-        state_value = policy_evaluation(policy)
+        state_value = policy_evaluation(policy, pr)
 
         policy_change_count = 0
         for i in range(len(states)):
@@ -130,26 +147,27 @@ def policy_iteration():
             chosen_a = np.argmax(policy[i])
             action_returns = []
             for action, act_prob in enumerate(policy[i]):
-                action_returns.append(act_prob * expected_returns(states[i], action, state_value))
+                action_returns.append(act_prob * expected_returns(states[i], action, state_value, pr))
+            print(f"action returns {action_returns}")
             best_action = np.argmax(action_returns)
             if best_action != chosen_a:
                 print(f"best action: {best_action}, chosen action: {chosen_a} in state {states[i]}")
                 policy_change_count += 1
-                policy[i] = np.eye(len(actions))[best_action]
                 policy_stable = False
+            policy[i] = np.eye(len(actions))[best_action]
         print("policy change in {} states".format(policy_change_count))
         if policy_stable:
             return policy, state_value
 
-
-def show_fig(data):
-    fig = sns.heatmap(np.flipud(data))
-    plt.show(fig)
+#
+# def show_fig(data):
+#     fig = sns.heatmap(np.flipud(data))
+#     plt.show(fig)
 
 
 if __name__ == '__main__':
     policy, state_value = policy_iteration()
-    print(policy)
-    print(state_value)
-    show_fig(policy)
-    show_fig(state_value)
+    print(f"optimal policy: {policy}")
+    print(f"optimal state value: {state_value}")
+    # show_fig(policy)
+    # show_fig(state_value)

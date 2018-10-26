@@ -29,7 +29,7 @@ def advanced_task(success, env, steps):
     return success
 
 
-def main():
+def call_advanced_task():
     success = False
     steps = 10
     env_game = EnvironmentGame()
@@ -58,4 +58,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    call_advanced_task()

@@ -67,7 +67,7 @@ def main():
     # states = ((x, y) for x in range(board.shape[0]) for y in range(board.shape[1]))
     steps = 10
 
-    simple_tasks(success, env, steps, actions, jump_out=False)
+    success = simple_tasks(success, env, steps, actions, jump_out=False)
 
     while not success:
         try_again = str(input("try again [y] or see the answer[n]"))
@@ -82,7 +82,7 @@ def main():
 
     if success:
         print("Now you can start the game!")
-        # TODO: call game
+        # TODO: call advanced tasks
 
 
 if __name__ == '__main__':
