@@ -1,5 +1,5 @@
 import numpy as np
-from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 
 def is_terminal(distance):
@@ -14,22 +14,22 @@ class Environment:
     from the destination"""
 
     def __init__(self):
-        self.nS1 = 3
-        self.nS2 = 4
+        self.nS1 = 30
+        self.nS2 = 40
         self.goal = 10
-        self.gamma = 0.0
+        self.gamma = 1.0
         self.actions = [1, 2]
         self.total_distance = 10
         self.states = [(d, k1, k2) for d in range(self.total_distance + 1) for k1 in range(1, self.nS1 + 1) for k2 in range(1, self.nS2 + 1)]
 
     # Return the next states given current state
     def step(self, cur_state, action):
-        assert action in self.actions
+        # assert action in self.actions
         d, k1, k2 = cur_state
-        assert (d >= 0, k1 >= 1, k2 >= 1), "value out of range"
+        # assert (d >= 0, k1 >= 1, k2 >= 1), "value out of range"
         reward = 0
 
-        next_states = {}  # key: next_state, values: transition_prob, reward, distance, done
+        next_states = {}  # key: next_state, values: transition_prob, reward
 
         # try skill 1
         if action == self.actions[0]:
@@ -50,6 +50,8 @@ class Environment:
 
             # if skill 1 is acquired
             else:
+                assert k1 == 1
+
                 d -= 1
                 if d == 0:
                     reward = self.goal - 1
@@ -142,7 +144,6 @@ def policy_iteration(env):
 
     policy = {state: np.ones(len(actions))/len(actions) for state in states}
 
-
     while True:
 
         V = policy_evaluation(policy, env)
@@ -168,18 +169,79 @@ def policy_iteration(env):
         if policy_stable:
             return policy, V
 
+
+def analysis_state_value():
+    states = [(d, k1, k2) for d in range(1, 11) for k1 in range(1, 4) for k2 in range(1, 5)]
+    V = {}
+    gamma = 0.0
+    g = 10
+    for state in states:
+        d, k1, k2 = state
+        V[state] = max(((g / (1 - gamma)) - (k2 + 2) * (g - 1) / 2),
+                       (g * np.floor(1 / ((1 - gamma) * d)) - (1 / (1 - gamma))))
+
+    return V
+
+
 def main():
     env = Environment()
     actions = env.actions
     states = env.states
+    gamma = env.gamma
 
     optimal_policy = {}
+    optimal_V = {}
     policy, V = policy_iteration(env)
     for (d, k1, k2), values in policy.items():
         if d > 0:
             optimal_policy[(d, k1, k2)] = values
-    print(optimal_policy)
-    print(V)
+            optimal_V[(d, k1, k2)] = V[(d, k1, k2)]
+
+    analysis_optimal_V = analysis_state_value()
+
+    difference = {}
+    for state in states:
+        d, k1, k2 = state
+        if d == 0:
+            continue
+        # difference[state] = optimal_V[state] - analysis_optimal_V[state]
+    print(f"difference between analysis and dynamic programming V: {difference}")
+
+    # VoP = {}
+    #
+    for state in states:
+
+        d, k1, k2 = state
+        if d == 0:
+            continue
+    #     v = 0
+    #     for action, action_prob in enumerate(optimal_policy[state]):
+    #
+    #         next_states = env.step(state, actions[action])
+    #
+    #         for next_state, (state_prob, reward) in next_states.items():
+    #             d_next, k1_next, k2_next = next_state
+    #             if d_next == 0:
+    #                 continue
+    #             # print(f"next state: {next_state}")
+    #             v += action_prob * state_prob * (reward + gamma * analysis_optimal_V[next_state])
+    #     VoP[state] = v
+    #
+    #     # print(f"VoP: {state}:{VoP[state]}")
+        print(f"V: {state}: {optimal_V[state]}")
+
+    # fig, ax = plt.subplots()
+    #
+    # x = []
+    # y = []
+    # for state in states:
+    #     d, k1, k2 = state
+    #     if d == 0:
+    #         continue
+    #     x.append(optimal_V[state])
+    #     y.append(analysis_optimal_V[state])
+    # ax.scatter(x, y)
+    # plt.show()
 
 
 if __name__ == '__main__':
