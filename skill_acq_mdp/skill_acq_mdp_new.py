@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import pandas as pd
 
 
 def is_terminal(distance):
@@ -13,11 +15,11 @@ class Environment:
     The space ship game environment has to be episodic, or else, it makes no sense, because one can't travel away
     from the destination"""
 
-    def __init__(self):
+    def __init__(self, gamma):
         self.nS1 = 3
         self.nS2 = 4
         self.goal = 10
-        self.gamma = 0.1
+        self.gamma = gamma
         self.actions = [1, 2]
         self.total_distance = 10
         self.states = [(d, k1, k2)
@@ -152,6 +154,7 @@ def policy_iteration(env):
     states = env.states
 
     policy = {state: np.ones(len(actions))/len(actions) for state in states}
+    action_values = {}
 
     while True:
 
@@ -164,8 +167,8 @@ def policy_iteration(env):
             d, k1, k2 = state
 
             chosen_a = np.argmax(policy[(d, k1, k2)])
-            action_values = one_step_lookahead((d, k1, k2), V, env)
-            # print("action_values: {}".format(action_values))
+            action_values[(d, k1, k2)] = one_step_lookahead((d, k1, k2), V, env)
+            # print(f"action_values at state{d, k1, k2}: {action_values[state]}")
             best_action = np.argmax(action_values)
             if best_action != chosen_a:
                 policy_change += 1
@@ -174,7 +177,7 @@ def policy_iteration(env):
         print("policy change in {} states".format(policy_change))
 
         if policy_stable:
-            return policy, V
+            return policy, V, action_values
 
 
 def analytical_state_value(env):
@@ -185,7 +188,6 @@ def analytical_state_value(env):
     V = {}
     gamma = env.gamma
     g = env.goal
-    # states = [(d, k2) for d in range(1, total_distance + 1) for k2 in range(1, nS2 + 1)]
     for state in states:
         d, k1, k2 = state
         if d == 0:
@@ -246,63 +248,87 @@ def my_formular_vop(env):
     return my_vop
 
 
+def reshape_v(v, env):
+    states = env.states
+    nS1 = env.nS1
+    nS2 = env.nS2
+    distance = env.total_distance
+    v_reshape = np.zeros((distance, nS1, nS2))
+    for d in range(1, distance+1):
+        for k1 in range(1, nS1 + 1):
+            for k2 in range(1, nS2 + 1):
+                v_reshape[d-1, k1-1, k2-1] = v[(d, k1, k2)]
+    return v_reshape
+
 
 def main():
-    env = Environment()
+    env = Environment(0.1)
     actions = env.actions
     states = env.states
     gamma = env.gamma
     distance = env.total_distance
     nS2 = env.nS2
+    nS1 = env.nS1
 
-    optimal_policy = {}
-    optimal_V = {}
-    policy, V = policy_iteration(env)
-    for (d, k1, k2), values in policy.items():
-        optimal_policy[(d, k1, k2)] = values
-        optimal_V[(d, k1, k2)] = V[(d, k1, k2)]
 
-    analytical_optimal_V = analytical_state_value(env)
-    Vop = VoP(analytical_optimal_V, env)
-    my_vop = my_formular_vop(env)
+    # optimal_policy, optimal_V, action_values = policy_iteration(env)
 
-    # difference = {}
-    # for state in states:
-    #     d, k1, k2 = state
-    #     if d == 0:
-    #         continue
-    #     difference[state] = optimal_V[state] - analytical_optimal_V[state]
-    # print(f"difference between analysis and dynamic programming V: {difference}")
+    # optimal_V_reshape = reshape_v(optimal_V, env)
+    # print(f"optimal v reshape: {optimal_V_reshape}")
 
-    # states = [(d, k2) for d in range(1, distance + 1) for k2 in range(1, nS2 + 1)]
+    #plot optimal_V
+    with open("optimal_v_dict.csv", "w") as csv_file:
+        writer = csv.writer(csv_file)
+        gamma_space = np.linspace(0.1, 0.1, 1, endpoint=True)
+        for gamma in gamma_space:
+            env = Environment(gamma)
+            optimal_policy, optimal_V, action_values = policy_iteration(env)
+            # # print vop, my_vop, optimal value
+            analytical_optimal_V = analytical_state_value(env)
+            Vop = VoP(analytical_optimal_V, env)
+            my_vop = my_formular_vop(env)
 
-    for state in states:
+            for state in states:
+                d, k1, k2 = state
+                print(f"k2:{k2}")
 
-        d, k1, k2 = state
-        # print(f"k2:{k2}")
+                print(f"my return of k2: {state}:{my_vop[state]}")
+                print(f"VoP: {state}:{Vop[state]}")
+                print(f"Action_values: {state}: {action_values[state]}")
+                # print(f"analytical optiaml value at {state}: {analytical_optimal_V[state]}")
 
-        print(f"my vop: {k2}:{my_vop[state]}")
-        print(f"VoP: {state}:{Vop[state]}")
-        # print(f"analytical optiaml value at {state}: {analytical_optimal_V[state]}")
+                print(f"V: {state}: {optimal_V[state]}")
+                print("\n")
+            #
+            fig, axs = plt.subplots()
 
-        print(f"V: {state}: {optimal_V[state]}")
+            y1 = []
+            y2 = []
+            y3 = []
+            y4 = []
+            for state in states:
+                d, k1, k2 = state
 
-    fig, axs = plt.subplots()
+                y1.append(optimal_V[state])
+                y2.append(Vop[state])
+                y3.append(my_vop[state])
+                y4.append(action_values[state][1])
+            x = [i for i in range(len(states))]
+            axs.scatter(x, y1, label="optiaml V", alpha=0.7)
+            axs.scatter(x, y2, label="vop", alpha=0.5)
+            axs.scatter(x, y3, label="my_vop")
+            # axs.plot(x, y4, label="action values of k2", alpha=0.5)
+            axs.set_xlabel("states:(d, k1, k2)")
+            axs.set_ylabel("state values")
+            plt.legend(loc="right")
+            plt.show()
+            writer.writerow(["gamma", "distance", "k1", "k2", "value"])
+            for (d, k1, k2), value in optimal_V.items():
+                    writer.writerow([float(gamma), int(d), int(k1), int(k2), float(value)])
 
-    y1 = []
-    y2 = []
-    y3 = []
-    for state in states:
-        d, k1, k2 = state
-
-        y1.append(optimal_V[state])
-        y2.append(Vop[state])
-        y3.append(my_vop[state])
-    x = [i for i in range(len(y1))]
-    axs.plot(x, y1, label="optiaml V")
-    axs.plot(x, y2, label="vop")
-    axs.plot(x, y3, label="my_vop")
-    plt.legend()
+    df = pd.read_csv("optimal_v_dict.csv")
+    plt.figure()
+    pd.tools.plotting.parallel_coordinates(df[['gamma', 'distance', 'k1', 'k2', 'value']], "distance")
     plt.show()
 
 
