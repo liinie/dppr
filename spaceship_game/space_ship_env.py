@@ -61,6 +61,7 @@ class EnvironmentTutorial(Environment):
 
 
 class EnvironmentGame(Environment):
+
     def __init__(self):
         super().__init__()
         self.finite_state = (0, 5)

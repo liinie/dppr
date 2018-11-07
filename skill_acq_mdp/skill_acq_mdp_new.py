@@ -16,8 +16,8 @@ class Environment:
     from the destination"""
 
     def __init__(self, gamma):
-        self.nS1 = 3
-        self.nS2 = 4
+        self.nS1 = 50
+        self.nS2 = 26
         self.goal = 10
         self.gamma = gamma
         self.actions = [1, 2]
@@ -27,8 +27,10 @@ class Environment:
                        for k1 in range(1, self.nS1 + 1)
                        for k2 in range(1, self.nS2 + 1)]
 
+
     def reset_distance(self):
-        return np.random.randint(4, self.total_distance + 1)
+        # return np.random.randint(4, self.total_distance + 1)
+        return 10
 
     # Return the next states given current state
     def step(self, cur_state, action):
@@ -80,8 +82,8 @@ class Environment:
 
                 # if getting the right key of skill 2, the player would get reward goal - 1
                 # and reaching the destination.
-                # d = 0
                 reward = self.goal - 1
+                # reward = 2 * self.goal - 1
                 # d will be reset to a random number between 3 and total_distance, game reset
                 d = self.reset_distance()
                 next_states[(d, k1, 1)] = (1/k2, reward)
@@ -89,6 +91,8 @@ class Environment:
             # if skill 2 is already acquired
             else:
                 reward = self.goal - 1
+                # reward = 2 * self.goal - 1
+
                 # d = 0
                 # d will be reset to a random number between 3 and total_distance, game reset
                 d = self.reset_distance()
@@ -181,19 +185,19 @@ def policy_iteration(env):
 
 
 def analytical_state_value(env):
-    total_distance = env.total_distance
-    nS1 = env.nS1
-    nS2 = env.nS2
-    states = [(d, k1, k2) for d in range(1, total_distance + 1) for k1 in range(1, nS1 + 1) for k2 in range(1, nS2 + 1)]
+    states = env.states
     V = {}
     gamma = env.gamma
     g = env.goal
     for state in states:
         d, k1, k2 = state
-        if d == 0:
-            continue
-        V[state] = max(((g / (1 - gamma)) - (k2 + 2) * (g - 1) / 2),
+        # if d == 0:
+        #     continue
+        V[state] = max(((g / (1 - gamma)) - (k2 + 1) * (g - 1) / 2),
                        (g * np.floor(1 / ((1 - gamma) * d)) - (1 / (1 - gamma))))
+        if d == 1 and k1 == 1:
+            print(f"analytical_state_value at state ({state}): {((g / (1 - gamma)) - (k2 + 1) * (g - 1) / 2)}, "
+                  f"{(g * np.floor(1 / ((1 - gamma) * d)) - (1 / (1 - gamma)))}")
 
     return V
 
@@ -211,9 +215,11 @@ def VoP(analyt_opt_v, env):
     for state in states:
         d, k1, k2 = state
         if k2 > 1:
-            v = 1/k2 * (g - 1 + gamma * analyt_opt_v[d, k1, 1]) + (1 - 1/k2) * (-1 + gamma * analyt_opt_v[d, k1, (k2 - 1)])
-            VoP[state] = v - (g * np.floor(1 / ((1 - gamma) * distance)) - (1 / (1 - gamma)))
-            # VoP[state] = v
+            v = 1/k2 * (g - 1 + gamma * analyt_opt_v[d, k1, 1]) + \
+                (1 - 1/k2) * (-1 + gamma * analyt_opt_v[d, k1, (k2 - 1)])
+            # VoP[state] = v - (g * np.floor(1 / ((1 - gamma) * distance)) - (1 / (1 - gamma)))
+            VoP[state] = v
+
         else:
             assert k2 == 1
             v = 1/k2 * (g - 1 + gamma * analyt_opt_v[d, k1, 1])
@@ -223,7 +229,6 @@ def VoP(analyt_opt_v, env):
 
 def my_formular_vop(env):
     nS2 = env.nS2
-    # k2 = [i for i in range(nS2 + 1)]
     gamma = env.gamma
     g = env.goal
     states = env.states
@@ -238,9 +243,10 @@ def my_formular_vop(env):
                 m = 1
                 for j in range(i):
                     m *= (1 - (1/(k2 - j)))
-                v += np.power(gamma, i)*\
+                v += np.power(gamma, i) *\
                     ((-k2 + i + 1 + k2*gamma - i*gamma - gamma + g - 1)/((k2 - i)*(1 - gamma)))* m
             my_vop[(d, k1, k2)] = v + (g - 1)/(k2*(1 - gamma)) - 1
+
         else:
             assert k2 == 1
             my_vop[(d, k1, k2)] = (g - 1)/(k2*(1 - gamma)) - 1
@@ -262,7 +268,7 @@ def reshape_v(v, env):
 
 
 def main():
-    env = Environment(0.1)
+    env = Environment(0.94)
     actions = env.actions
     states = env.states
     gamma = env.gamma
@@ -279,7 +285,7 @@ def main():
     #plot optimal_V
     with open("optimal_v_dict.csv", "w") as csv_file:
         writer = csv.writer(csv_file)
-        gamma_space = np.linspace(0.1, 0.1, 1, endpoint=True)
+        gamma_space = np.linspace(0.99, 0.99, 1, endpoint=True)
         for gamma in gamma_space:
             env = Environment(gamma)
             optimal_policy, optimal_V, action_values = policy_iteration(env)
@@ -288,48 +294,49 @@ def main():
             Vop = VoP(analytical_optimal_V, env)
             my_vop = my_formular_vop(env)
 
-            for state in states:
-                d, k1, k2 = state
-                print(f"k2:{k2}")
 
-                print(f"my return of k2: {state}:{my_vop[state]}")
-                print(f"VoP: {state}:{Vop[state]}")
-                print(f"Action_values: {state}: {action_values[state]}")
-                # print(f"analytical optiaml value at {state}: {analytical_optimal_V[state]}")
-
-                print(f"V: {state}: {optimal_V[state]}")
-                print("\n")
-            #
             fig, axs = plt.subplots()
 
             y1 = []
             y2 = []
             y3 = []
             y4 = []
+
             for state in states:
                 d, k1, k2 = state
+                if d == 1 and k1 == 1:
+                    # print(f"optimal_v at state{d, k1, k2}: {optimal_V[(d, k1, k2)]}")
+                    print(f"action_values at state {d, k1, k2}: {action_values[(d, k1, k2)]}")
+                    print(f"vop at state{d, k1, k2}: {Vop[(d, k1, k2)]}")
+                    # print(f"my_vop at state {d, k1, k2}: {my_vop[(d, k1, k2)]}")
+                    print("\n")
 
-                y1.append(optimal_V[state])
-                y2.append(Vop[state])
-                y3.append(my_vop[state])
-                y4.append(action_values[state][1])
-            x = [i for i in range(len(states))]
-            axs.scatter(x, y1, label="optiaml V", alpha=0.7)
-            axs.scatter(x, y2, label="vop", alpha=0.5)
-            axs.scatter(x, y3, label="my_vop")
-            # axs.plot(x, y4, label="action values of k2", alpha=0.5)
-            axs.set_xlabel("states:(d, k1, k2)")
-            axs.set_ylabel("state values")
-            plt.legend(loc="right")
+                    y1.append(optimal_V[state])
+                    y2.append(action_values[state][1])
+                    y3.append(my_vop[state])
+                    y4.append(Vop[state])
+
+            # x = [i for i in range(len(y1))]
+            # axs.scatter(x, y1, label="optimal V", alpha=0.7)
+            # axs.scatter(x, y2, label="vop", alpha=0.7)
+            # axs.scatter(x, y3, label="my_vop", alpha=0.5)
+            # axs.scatter(x, y4, label="action values of k2", alpha=0.5)
+            assert len(y2) == len(y4)
+            axs.scatter(y2, y4, label="action values of k2", alpha=0.5)
+            axs.set_xlabel("action states value DP:(d=1, k1=1, k2=(1, ... 26))")
+            axs.set_ylabel("VOP state value : (d=1, k1=1, k2=(1, ... 26))")
+            plt.title("comparison of vop and opitmal state value from DP")
+            plt.legend()
             plt.show()
-            writer.writerow(["gamma", "distance", "k1", "k2", "value"])
-            for (d, k1, k2), value in optimal_V.items():
-                    writer.writerow([float(gamma), int(d), int(k1), int(k2), float(value)])
+            # writer.writerow(["gamma", "distance", "k1", "k2", "value"])
+            # for (d, k1, k2), value in optimal_V.items():
+            #         writer.writerow([float(gamma), int(d), int(k1), int(k2), float(value)])
 
-    df = pd.read_csv("optimal_v_dict.csv")
-    plt.figure()
-    pd.tools.plotting.parallel_coordinates(df[['gamma', 'distance', 'k1', 'k2', 'value']], "distance")
-    plt.show()
+    # df = pd.read_csv("optimal_v_dict.csv")
+    # plt.figure()
+    # pd.plotting.parallel_coordinates(df[['gamma', 'distance', 'k2', 'value']], "value")
+    # pd.plotting.parallel_coordinates(df[['gamma', 'distance', 'k1', 'value']], k1)
+    # plt.show()
 
 
 if __name__ == '__main__':
