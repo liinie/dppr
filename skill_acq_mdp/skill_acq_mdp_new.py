@@ -16,7 +16,7 @@ class Environment:
     from the destination"""
 
     def __init__(self, gamma):
-        self.nS1 = 50
+        self.nS1 = 28
         self.nS2 = 26
         self.goal = 10
         self.gamma = gamma
@@ -285,7 +285,7 @@ def main():
     #plot optimal_V
     with open("optimal_v_dict.csv", "w") as csv_file:
         writer = csv.writer(csv_file)
-        gamma_space = np.linspace(0.99, 0.99, 1, endpoint=True)
+        gamma_space = np.linspace(0.94, 0.94, 1, endpoint=True)
         for gamma in gamma_space:
             env = Environment(gamma)
             optimal_policy, optimal_V, action_values = policy_iteration(env)
@@ -304,7 +304,7 @@ def main():
 
             for state in states:
                 d, k1, k2 = state
-                if d == 1 and k1 == 1:
+                if d == 10 and k1 == 1:
                     # print(f"optimal_v at state{d, k1, k2}: {optimal_V[(d, k1, k2)]}")
                     print(f"action_values at state {d, k1, k2}: {action_values[(d, k1, k2)]}")
                     print(f"vop at state{d, k1, k2}: {Vop[(d, k1, k2)]}")
@@ -323,8 +323,8 @@ def main():
             # axs.scatter(x, y4, label="action values of k2", alpha=0.5)
             assert len(y2) == len(y4)
             axs.scatter(y2, y4, label="action values of k2", alpha=0.5)
-            axs.set_xlabel("action states value DP:(d=1, k1=1, k2=(1, ... 26))")
-            axs.set_ylabel("VOP state value : (d=1, k1=1, k2=(1, ... 26))")
+            axs.set_xlabel("action states value DP:(d=10, k1=1, k2=(1, ... 26))")
+            axs.set_ylabel("VOP state value : (d=10, k1=1, k2=(1, ... 26))")
             plt.title("comparison of vop and opitmal state value from DP")
             plt.legend()
             plt.show()
