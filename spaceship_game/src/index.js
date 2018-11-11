@@ -12,105 +12,125 @@ class Square extends React.Component{
 
 class Board extends React.Component{
 
-    renderSquare(i) {
-        // TODO: if arrowup: current_state - 5, else if arrow right: current_state + 1
-        if (i === this.props.current_state){
-            return <Square value={'X'}/>
-        }else if (i === this.props.end_state) {
-            return <Square value={'O'}/>
-        }else{
-            return <Square value={''}/>
-        }
-    }
-
     render(){
+        const g = Array(6).fill().map(x => Array(6).fill());
+        const board = g.map((row, i) => { return (
+            <tr key={"row_"+i}>
+                {row.map((col, j) => {
+                    console.log([i, j]);
+                    if (i === this.props.current_state_row && j === this.props.current_state_col) {
+                        return <Square value={'X'}/>;
+                    } else if (i === this.props.end_state_row && j === this.props.end_state_col){
+                        return <Square value={'O'}/>
+                    } else {
+                        return <Square value = {''}/>
+                    }
+                })}
+            </tr>)
+        });
+
         return (
-            <div>
-                <div className='board-row'>
-                    {this.renderSquare(0)}
-                    {this.renderSquare(1)}
-                    {this.renderSquare(2)}
-                    {this.renderSquare(3)}
-                    {this.renderSquare(4)}
-                    {this.renderSquare(5)}
+            <div style={{ textAlign:'center'}}>
+                <div style={{margin: 'auto', width:"40%"}}>
+                    <table cellSpacing="0">
+                        <tbody>
+                        {board}
+                        </tbody>
+                    </table>
                 </div>
-                <div className='board-row'>
-                    {this.renderSquare(6)}
-                    {this.renderSquare(7)}
-                    {this.renderSquare(8)}
-                    {this.renderSquare(9)}
-                    {this.renderSquare(10)}
-                    {this.renderSquare(11)}
-                </div>
-                <div className='board-row'>
-                    {this.renderSquare(12)}
-                    {this.renderSquare(13)}
-                    {this.renderSquare(14)}
-                    {this.renderSquare(15)}
-                    {this.renderSquare(16)}
-                    {this.renderSquare(17)}
-                </div>
-                <div className='board-row'>
-                    {this.renderSquare(18)}
-                    {this.renderSquare(19)}
-                    {this.renderSquare(20)}
-                    {this.renderSquare(21)}
-                    {this.renderSquare(22)}
-                    {this.renderSquare(23)}
-                </div>
-                <div className='board-row'>
-                    {this.renderSquare(24)}
-                    {this.renderSquare(25)}
-                    {this.renderSquare(26)}
-                    {this.renderSquare(27)}
-                    {this.renderSquare(28)}
-                    {this.renderSquare(29)}
-                </div>
-                <div className='board-row'>
-                    {this.renderSquare(30)}
-                    {this.renderSquare(31)}
-                    {this.renderSquare(32)}
-                    {this.renderSquare(33)}
-                    {this.renderSquare(34)}
-                    {this.renderSquare(35)}
-                </div>
+                <br />
+                {/*<Button onClick={this.handleReset} />*/}
             </div>
-        );
+        )
+
     }
 }
 
+//
+// class ranking_board extends React.Component {
+//
+// }
 
-class ranking_board extends React.Component {
-
-}
 
 class Layout extends React.Component {
     constructor(props){
         super(props);
         this.state = {
             currentKey: '',
-            current_state: null,
-            end_state:null,
-            teleportationKey: ''
+            current_state_row: null,
+            current_state_col:null,
+            end_state_row:null,
+            end_state_col:null,
+            teleportationKey: '',
+            episode_over: null,
+            step: null,
+            round: null,
         };
-        this.handleKeyPress = this.handleKeyPress.bind(this);
+        // this.handleKeyPress = this.handleKeyPress.bind(this);
     }
 
-    handleKeyPress(e) {
+    handleKeyPress = (e) =>{
         //TODO: add the case when moving out of the board
-        this.setState({currentKey: e.key});
-        if(e.key === "ArrowRight") {
-            this.setState({current_state: this.state.current_state + 1});
-        }else if (e.key === "ArrowUp") {
-            this.setState({current_state: this.state.current_state - 6});
-        }else if (e.key === this.state.teleportationKey){
-            this.setState({current_state: this.state.end_state})
+        this.setState({
+            currentKey: e.key,
+            step: this.state.step + 1,
+        });
+        if (!this.state.episode_over){
+            if (e.key === "ArrowRight") {
+                if (this.state.current_state_col + 1 <= 5){
+                    this.setState({
+                        current_state_col: this.state.current_state_col + 1,
+                    });
+                }
+            }else if (e.key === "ArrowUp") {
+                if (this.state.current_state_row - 1 >= 0){
+                    this.setState({current_state_row: this.state.current_state_row - 1});
+                }
+            }else if (e.key === this.state.teleportationKey){
+                this.setState({
+                    current_state_row: this.state.end_state_row,
+                    current_state_col: this.state.end_state_col,
+                })
+            }
+        }else {
+
         }
-    }
+    };
+
+    reset_board = () =>{
+        this.setState({
+            current_state_row: 5,
+            current_state_col: 0,
+            episode_over:false,
+            step:0,
+            round: this.state.round +1,
+        });
+    };
+
+    checkEpisodeOver = () =>{
+        if (this.state.current_state_row === this.state.end_state_row &&
+        this.state.current_state_col === this.state.end_state_col){
+            this.setState({
+                episode_over: true,
+            });
+            this.reset_board();
+        } else {
+            return <h1>step {this.state.step} / round {this.state.round}</h1>
+        }
+    };
 
     componentDidMount() {
         document.addEventListener('keydown', this.handleKeyPress);
-        this.setState({current_state: 30, end_state:5, teleportationKey: "p"});
+        this.setState({
+            current_state_row: 5,
+            current_state_col: 0,
+            end_state_row: 0,
+            end_state_col: 5,
+            teleportationKey: "p",
+            episode_over:false,
+            step:0,
+            round:1,
+        });
     }
 
     componentWillUnmount() {
@@ -118,10 +138,17 @@ class Layout extends React.Component {
     }
 
     render() {
+        const status = this.checkEpisodeOver();
         return(
             <div>
-                <h2>The last key you pressed has the keycode: {this.state.currentKey}</h2>
-                <Board current_state={this.state.current_state} end_state={this.state.end_state}/>
+                <div className="game_status">{status}</div>
+                <h2>The last key you pressed: {this.state.currentKey}</h2>
+                <Board
+                    current_state_row={this.state.current_state_row}
+                    current_state_col={this.state.current_state_col}
+                    end_state_row={this.state.end_state_row}
+                    end_state_col={this.state.end_state_col}
+                />
             </div>
         );
     }
