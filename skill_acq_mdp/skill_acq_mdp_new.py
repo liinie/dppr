@@ -4,9 +4,9 @@ import csv
 import pandas as pd
 
 
-def is_terminal(distance):
-    if distance == 0:
-        return True
+# def is_terminal(distance):
+#     if distance == 0:
+#         return True
 
 
 class Environment:
@@ -30,7 +30,7 @@ class Environment:
 
     def reset_distance(self):
         # return np.random.randint(4, self.total_distance + 1)
-        return 10
+        return self.total_distance
 
     # Return the next states given current state
     def step(self, cur_state, action):
@@ -49,6 +49,7 @@ class Environment:
                 reward = -1
 
                 next_states[(d, k1 - 1, k2)] = (1 - (1/k1), reward)
+                # print(f"next_state with action k1: {d, k1-1, k2}")
 
                 # if getting the skill 1, the player move one step further in obj-mdp, and get reward -1 if
                 # he's not reached the goal
@@ -58,6 +59,7 @@ class Environment:
                     # reset the game environment
                     d = self.reset_distance()
                 next_states[(d, 1, k2)] = (1/k1, reward)
+                # print(f"next_state with action k1: {d, 1, k2}")
 
             # if skill 1 is acquired
             else:
@@ -72,6 +74,7 @@ class Environment:
                 else:
                     reward = -1
                 next_states[(d, 1, k2)] = (1, reward)
+                # print(f"next_state with action k2: {d, 1, k2}")
 
         elif action == self.actions[1]:
             # if skill 2 is not acquired
@@ -79,6 +82,7 @@ class Environment:
                 # if getting error when trying skill 2, the player would get reward -1
                 reward = -1
                 next_states[(d, k1, k2 - 1)] = (1 - (1/k2), reward)
+                # print(f"next_state with action k2: {d, k1, k2-1}")
 
                 # if getting the right key of skill 2, the player would get reward goal - 1
                 # and reaching the destination.
@@ -87,6 +91,8 @@ class Environment:
                 # d will be reset to a random number between 3 and total_distance, game reset
                 d = self.reset_distance()
                 next_states[(d, k1, 1)] = (1/k2, reward)
+                # print(f"next_state with action k2: {d, k1, 1}")
+
 
             # if skill 2 is already acquired
             else:
@@ -158,7 +164,7 @@ def policy_iteration(env):
     states = env.states
 
     policy = {state: np.ones(len(actions))/len(actions) for state in states}
-    action_values = {}
+    action_values = np.zeros(2)
 
     while True:
 
@@ -171,9 +177,10 @@ def policy_iteration(env):
             d, k1, k2 = state
 
             chosen_a = np.argmax(policy[(d, k1, k2)])
-            action_values[(d, k1, k2)] = one_step_lookahead((d, k1, k2), V, env)
-            # print(f"action_values at state{d, k1, k2}: {action_values[state]}")
+            action_values = one_step_lookahead((d, k1, k2), V, env)
+            print(f"action_values at state{d, k1, k2}: {action_values}")
             best_action = np.argmax(action_values)
+            print(f"best_action at state {d, k1, k2}: {best_action}")
             if best_action != chosen_a:
                 policy_change += 1
                 policy_stable = False
@@ -181,54 +188,53 @@ def policy_iteration(env):
         print("policy change in {} states".format(policy_change))
 
         if policy_stable:
-            return policy, V, action_values
+            return policy, V
+
+#
+# def analytical_state_value(env):
+#     states = env.states
+#     V = {}
+#     gamma = env.gamma
+#     g = env.goal
+#     for state in states:
+#         d, k1, k2 = state
+#         # if d == 0:
+#         #     continue
+#         V[state] = max(((g / (1 - gamma)) - (k2 + 1) * (g - 1) / 2),
+#                        (g * np.floor(1 / ((1 - gamma) * d)) - (1 / (1 - gamma))))
+#         if d == 1 and k1 == 1:
+#             print(f"analytical_state_value at state ({state}): {((g / (1 - gamma)) - (k2 + 1) * (g - 1) / 2)}, "
+#                   f"{(g * np.floor(1 / ((1 - gamma) * d)) - (1 / (1 - gamma)))}")
+#
+#     return V
 
 
-def analytical_state_value(env):
-    states = env.states
-    V = {}
-    gamma = env.gamma
-    g = env.goal
-    for state in states:
-        d, k1, k2 = state
-        # if d == 0:
-        #     continue
-        V[state] = max(((g / (1 - gamma)) - (k2 + 1) * (g - 1) / 2),
-                       (g * np.floor(1 / ((1 - gamma) * d)) - (1 / (1 - gamma))))
-        if d == 1 and k1 == 1:
-            print(f"analytical_state_value at state ({state}): {((g / (1 - gamma)) - (k2 + 1) * (g - 1) / 2)}, "
-                  f"{(g * np.floor(1 / ((1 - gamma) * d)) - (1 / (1 - gamma)))}")
-
-    return V
-
-
-def VoP(analyt_opt_v, env):
-    VoP = {}
-    # states = env.states
-    gamma = env.gamma
-    g = env.goal
-    distance = env.total_distance
-    nS2 = env.nS2
-    nS1 = env.nS1
-    states = [(d, k1, k2) for d in range(1, distance + 1) for k1 in range(1, nS1 + 1) for k2 in range(1, nS2 + 1)]
-
-    for state in states:
-        d, k1, k2 = state
-        if k2 > 1:
-            v = 1/k2 * (g - 1 + gamma * analyt_opt_v[d, k1, 1]) + \
-                (1 - 1/k2) * (-1 + gamma * analyt_opt_v[d, k1, (k2 - 1)])
-            # VoP[state] = v - (g * np.floor(1 / ((1 - gamma) * distance)) - (1 / (1 - gamma)))
-            VoP[state] = v
-
-        else:
-            assert k2 == 1
-            v = 1/k2 * (g - 1 + gamma * analyt_opt_v[d, k1, 1])
-            VoP[state] = v
-    return VoP
+# def VoP(analyt_opt_v, env):
+#     VoP = {}
+#     # states = env.states
+#     gamma = env.gamma
+#     g = env.goal
+#     distance = env.total_distance
+#     nS2 = env.nS2
+#     nS1 = env.nS1
+#     states = [(d, k1, k2) for d in range(1, distance + 1) for k1 in range(1, nS1 + 1) for k2 in range(1, nS2 + 1)]
+#
+#     for state in states:
+#         d, k1, k2 = state
+#         if k2 > 1:
+#             v = 1/k2 * (g - 1 + gamma * analyt_opt_v[d, k1, 1]) + \
+#                 (1 - 1/k2) * (-1 + gamma * analyt_opt_v[d, k1, (k2 - 1)])
+#             # VoP[state] = v - (g * np.floor(1 / ((1 - gamma) * distance)) - (1 / (1 - gamma)))
+#             VoP[state] = v
+#
+#         else:
+#             assert k2 == 1
+#             v = 1/k2 * (g - 1 + gamma * analyt_opt_v[d, k1, 1])
+#             VoP[state] = v
+#     return VoP
 
 
 def my_formular_vop(env):
-    nS2 = env.nS2
     gamma = env.gamma
     g = env.goal
     states = env.states
@@ -244,37 +250,34 @@ def my_formular_vop(env):
                 for j in range(i):
                     m *= (1 - (1/(k2 - j)))
                 v += np.power(gamma, i) *\
-                    ((-k2 + i + 1 + k2*gamma - i*gamma - gamma + g - 1)/((k2 - i)*(1 - gamma)))* m
-            my_vop[(d, k1, k2)] = v + (g - 1)/(k2*(1 - gamma)) - 1
+                    ((-k2 + i + k2*gamma - i*gamma - gamma + g)/((k2 - i)*(1 - gamma)))* m
+            my_vop[(d, k1, k2)] = v + (g - 1)/(k2*(1 - gamma)) - 1 + 1/k2
 
         else:
             assert k2 == 1
-            my_vop[(d, k1, k2)] = (g - 1)/(k2*(1 - gamma)) - 1
+            my_vop[(d, k1, k2)] = (g - 1)/(k2*(1 - gamma)) -1 + 1/k2
 
     return my_vop
-
-
-def reshape_v(v, env):
-    states = env.states
-    nS1 = env.nS1
-    nS2 = env.nS2
-    distance = env.total_distance
-    v_reshape = np.zeros((distance, nS1, nS2))
-    for d in range(1, distance+1):
-        for k1 in range(1, nS1 + 1):
-            for k2 in range(1, nS2 + 1):
-                v_reshape[d-1, k1-1, k2-1] = v[(d, k1, k2)]
-    return v_reshape
+#
+#
+# def reshape_v(v, env):
+#     states = env.states
+#     nS1 = env.nS1
+#     nS2 = env.nS2
+#     distance = env.total_distance
+#     v_reshape = np.zeros((distance, nS1, nS2))
+#     for d in range(1, distance+1):
+#         for k1 in range(1, nS1 + 1):
+#             for k2 in range(1, nS2 + 1):
+#                 v_reshape[d-1, k1-1, k2-1] = v[(d, k1, k2)]
+#     return v_reshape
 
 
 def main():
     env = Environment(0.94)
-    actions = env.actions
     states = env.states
-    gamma = env.gamma
-    distance = env.total_distance
-    nS2 = env.nS2
-    nS1 = env.nS1
+    total_distance = env.total_distance
+
 
 
     # optimal_policy, optimal_V, action_values = policy_iteration(env)
@@ -283,60 +286,42 @@ def main():
     # print(f"optimal v reshape: {optimal_V_reshape}")
 
     #plot optimal_V
-    with open("optimal_v_dict.csv", "w") as csv_file:
-        writer = csv.writer(csv_file)
-        gamma_space = np.linspace(0.94, 0.94, 1, endpoint=True)
-        for gamma in gamma_space:
-            env = Environment(gamma)
-            optimal_policy, optimal_V, action_values = policy_iteration(env)
-            # # print vop, my_vop, optimal value
-            analytical_optimal_V = analytical_state_value(env)
-            Vop = VoP(analytical_optimal_V, env)
-            my_vop = my_formular_vop(env)
+
+    optimal_policy, optimal_V = policy_iteration(env)
+    # # print vop, my_vop, optimal value
+    # analytical_optimal_V = analytical_state_value(env)
+    # Vop = VoP(analytical_optimal_V, env)
+    my_vop = my_formular_vop(env)
 
 
-            fig, axs = plt.subplots()
+    fig, axs = plt.subplots()
 
-            y1 = []
-            y2 = []
-            y3 = []
-            y4 = []
+    y1 = []
+    y2 = []
+    y3 = []
+    y4 = []
 
-            for state in states:
-                d, k1, k2 = state
-                if d == 10 and k1 == 1:
-                    # print(f"optimal_v at state{d, k1, k2}: {optimal_V[(d, k1, k2)]}")
-                    print(f"action_values at state {d, k1, k2}: {action_values[(d, k1, k2)]}")
-                    print(f"vop at state{d, k1, k2}: {Vop[(d, k1, k2)]}")
-                    # print(f"my_vop at state {d, k1, k2}: {my_vop[(d, k1, k2)]}")
-                    print("\n")
+    for state in states:
+        d, k1, k2 = state
+        if d == total_distance -1 and k1 == 1:
+            action_values = one_step_lookahead(state, optimal_V, env)
+            # print(f"optimal_v at state{d, k1, k2}: {optimal_V[(d, k1, k2)]}")
+            print(f"action_values at state {d, k1, k2}: {action_values}")
+            # print(f"vop at state{d, k1, k2}: {Vop[(d, k1, k2)]}")
+            print(f"my_vop at state {d, k1, k2}: {my_vop[(d, k1, k2)]}")
+            print("\n")
+            y1.append(optimal_V[state])
+            y2.append(action_values[1])
+            y3.append(my_vop[state])
+            # y4.append(Vop[state])
 
-                    y1.append(optimal_V[state])
-                    y2.append(action_values[state][1])
-                    y3.append(my_vop[state])
-                    y4.append(Vop[state])
-
-            # x = [i for i in range(len(y1))]
-            # axs.scatter(x, y1, label="optimal V", alpha=0.7)
-            # axs.scatter(x, y2, label="vop", alpha=0.7)
-            # axs.scatter(x, y3, label="my_vop", alpha=0.5)
-            # axs.scatter(x, y4, label="action values of k2", alpha=0.5)
-            assert len(y2) == len(y4)
-            axs.scatter(y2, y4, label="action values of k2", alpha=0.5)
-            axs.set_xlabel("action states value DP:(d=10, k1=1, k2=(1, ... 26))")
-            axs.set_ylabel("VOP state value : (d=10, k1=1, k2=(1, ... 26))")
-            plt.title("comparison of vop and opitmal state value from DP")
-            plt.legend()
-            plt.show()
-            # writer.writerow(["gamma", "distance", "k1", "k2", "value"])
-            # for (d, k1, k2), value in optimal_V.items():
-            #         writer.writerow([float(gamma), int(d), int(k1), int(k2), float(value)])
-
-    # df = pd.read_csv("optimal_v_dict.csv")
-    # plt.figure()
-    # pd.plotting.parallel_coordinates(df[['gamma', 'distance', 'k2', 'value']], "value")
-    # pd.plotting.parallel_coordinates(df[['gamma', 'distance', 'k1', 'value']], k1)
-    # plt.show()
+    assert len(y2) == len(y3)
+    axs.scatter(y2, y3, label="action values of k2", alpha=0.5)
+    axs.set_xlabel("action states value DP:(d=10, k1=1, k2=(1, ... 26))")
+    axs.set_ylabel("new VOP state value : (d=10, k1=1, k2=(1, ... 26))")
+    plt.title("comparison of vop and opitmal state value from DP")
+    plt.legend(loc="upper left")
+    plt.show()
 
 
 if __name__ == '__main__':
