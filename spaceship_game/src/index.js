@@ -46,10 +46,34 @@ class Board extends React.Component{
     }
 }
 
-//
-// class ranking_board extends React.Component {
-//
-// }
+
+class RankingBoard extends React.Component {
+    render(){
+        return(
+            <div>
+                <h2 className="steps">spaceship heros ranking board
+                    after step {this.props.step} in round {this.props.round}</h2>
+
+
+                <ol>
+                    <li>A. Turing: 10</li>
+                    <li>J. Neumann: 10</li>
+                    <li>J. Tennenbaum: 10</li>
+                    <li>A. Einstein</li>
+                </ol>
+            </div>
+        );
+    }
+
+}
+
+class Score extends React.Component {
+    render(){
+        return (
+            <h2>Your score is: {this.props.score}</h2>
+        );
+    }
+}
 
 
 class Layout extends React.Component {
@@ -62,9 +86,11 @@ class Layout extends React.Component {
             end_state_row:null,
             end_state_col:null,
             teleportationKey: '',
-            episode_over: null,
+            episode_win: null,
             step: null,
             round: null,
+            score: null,
+            goal: null,
         };
         // this.handleKeyPress = this.handleKeyPress.bind(this);
     }
@@ -74,8 +100,9 @@ class Layout extends React.Component {
         this.setState({
             currentKey: e.key,
             step: this.state.step + 1,
+            score: this.state.score - 1,
         });
-        if (!this.state.episode_over){
+        if (!this.state.episode_win){
             if (e.key === "ArrowRight") {
                 if (this.state.current_state_col + 1 <= 5){
                     this.setState({
@@ -97,11 +124,11 @@ class Layout extends React.Component {
         }
     };
 
-    reset_board = () =>{
+    next_round_board = () =>{
         this.setState({
             current_state_row: 5,
             current_state_col: 0,
-            episode_over:false,
+            episode_win:false,
             step:0,
             round: this.state.round +1,
         });
@@ -111,9 +138,10 @@ class Layout extends React.Component {
         if (this.state.current_state_row === this.state.end_state_row &&
         this.state.current_state_col === this.state.end_state_col){
             this.setState({
-                episode_over: true,
+                episode_win: true,
+                score: this.state.score + this.state.goal,
             });
-            this.reset_board();
+            this.next_round_board();
         } else {
             return <h1>step {this.state.step} / round {this.state.round}</h1>
         }
@@ -127,9 +155,12 @@ class Layout extends React.Component {
             end_state_row: 0,
             end_state_col: 5,
             teleportationKey: "p",
-            episode_over:false,
+            episode_win:false,
             step:0,
             round:1,
+            goal: 10,
+            score: 0,
+            goal: 10,
         });
     }
 
@@ -142,6 +173,7 @@ class Layout extends React.Component {
         return(
             <div>
                 <div className="game_status">{status}</div>
+                <Score score={this.state.score}/>
                 <h2>The last key you pressed: {this.state.currentKey}</h2>
                 <Board
                     current_state_row={this.state.current_state_row}
@@ -149,6 +181,7 @@ class Layout extends React.Component {
                     end_state_row={this.state.end_state_row}
                     end_state_col={this.state.end_state_col}
                 />
+                <RankingBoard step={this.state.step} round={this.state.round}/>
             </div>
         );
     }
