@@ -51,7 +51,7 @@ class RankingBoard extends React.Component {
     render(){
         return(
             <div>
-                <h2 className="steps">spaceship heros ranking board
+                <h2 className="steps"> spaceship heroes ranking board
                     after step {this.props.step} in round {this.props.round}</h2>
 
 
@@ -59,20 +59,20 @@ class RankingBoard extends React.Component {
                     <li>A. Turing: 10</li>
                     <li>J. Neumann: 10</li>
                     <li>J. Tennenbaum: 10</li>
-                    <li>A. Einstein</li>
+                    <li>A. Einstein: 10</li>
                 </ol>
             </div>
         );
     }
-
 }
 
-class Score extends React.Component {
+class AddScore extends React.Component {
     render(){
         return (
             <h2>Your score is: {this.props.score}</h2>
         );
     }
+
 }
 
 
@@ -91,36 +91,20 @@ class Layout extends React.Component {
             round: null,
             score: null,
             goal: null,
+            episode_interrupt: null,
         };
-        // this.handleKeyPress = this.handleKeyPress.bind(this);
     }
 
-    handleKeyPress = (e) =>{
-        //TODO: add the case when moving out of the board
-        this.setState({
-            currentKey: e.key,
-            step: this.state.step + 1,
-            score: this.state.score - 1,
-        });
-        if (!this.state.episode_win){
-            if (e.key === "ArrowRight") {
-                if (this.state.current_state_col + 1 <= 5){
-                    this.setState({
-                        current_state_col: this.state.current_state_col + 1,
-                    });
-                }
-            }else if (e.key === "ArrowUp") {
-                if (this.state.current_state_row - 1 >= 0){
-                    this.setState({current_state_row: this.state.current_state_row - 1});
-                }
-            }else if (e.key === this.state.teleportationKey){
-                this.setState({
-                    current_state_row: this.state.end_state_row,
-                    current_state_col: this.state.end_state_col,
-                })
-            }
-        }else {
-
+    checkEpisodeWin = () => {
+        if (this.state.current_state_row === this.state.end_state_row &&
+            this.state.current_state_col === this.state.end_state_col) {
+            this.setState({
+                episode_win: true,
+                score: this.state.score + this.state.goal,
+            });
+            return true
+        } else {
+            return false
         }
     };
 
@@ -128,23 +112,53 @@ class Layout extends React.Component {
         this.setState({
             current_state_row: 5,
             current_state_col: 0,
-            episode_win:false,
-            step:0,
+            episode_win: false,
+            step: 0,
             round: this.state.round +1,
         });
     };
 
-    checkEpisodeOver = () =>{
-        if (this.state.current_state_row === this.state.end_state_row &&
-        this.state.current_state_col === this.state.end_state_col){
+    handleKeyPress = (e) =>{
+
+        this.setState({
+            currentKey: e.key,
+            step: this.state.step + 1,
+            score: this.state.score - 1,
+        });
+        if (e.key === "ArrowRight") {
+            if (this.state.current_state_col + 1 <= 5){
+                this.setState({
+                    current_state_col: this.state.current_state_col + 1,
+                });
+                if (this.checkEpisodeWin()) {
+                    setTimeout(()=>this.next_round_board(), 2000);
+                }
+            }
+        }else if (e.key === "ArrowUp") {
+            if (this.state.current_state_row - 1 >= 0){
+                this.setState({
+                    current_state_row: this.state.current_state_row - 1
+                });
+                if (this.checkEpisodeWin()) {
+                    setTimeout(()=>this.next_round_board(), 2000);
+                }
+            }
+        }else if (e.key === this.state.teleportationKey){
             this.setState({
+                current_state_row: this.state.end_state_row,
+                current_state_col: this.state.end_state_col,
                 episode_win: true,
                 score: this.state.score + this.state.goal,
             });
-            this.next_round_board();
-        } else {
-            return <h1>step {this.state.step} / round {this.state.round}</h1>
+            setTimeout(()=>this.next_round_board(), 2000);
         }
+
+
+    };
+
+
+    GameStatus = () =>{
+            return <h2>step {this.state.step} / round {this.state.round}</h2>
     };
 
     componentDidMount() {
@@ -160,7 +174,6 @@ class Layout extends React.Component {
             round:1,
             goal: 10,
             score: 0,
-            goal: 10,
         });
     }
 
@@ -169,18 +182,28 @@ class Layout extends React.Component {
     }
 
     render() {
-        const status = this.checkEpisodeOver();
+        const title = "Spaceship Adventure";
+        const instruction1 = "skill1: try arrows keys to move. Hint: ArrowUp moves your spaceship up.";
+        const instruction2 = "skill2: try [a-z] lower case letters to teleport the spaceship, so that your spaceship will reach the " +
+            "dstination in one move";
+
+        const status = this.GameStatus();
         return(
             <div>
+                <h1 style={{ textAlign:'center'}}>{title}</h1>
+                <h3 className="instruction1">{instruction1}</h3>
+                <h3 className="instruction2">{instruction2}</h3>
                 <div className="game_status">{status}</div>
-                <Score score={this.state.score}/>
-                <h2>The last key you pressed: {this.state.currentKey}</h2>
+                <AddScore
+                    score={this.state.score}
+                />
                 <Board
                     current_state_row={this.state.current_state_row}
                     current_state_col={this.state.current_state_col}
                     end_state_row={this.state.end_state_row}
                     end_state_col={this.state.end_state_col}
                 />
+                <h2>The last key you pressed: {this.state.currentKey}</h2>
                 <RankingBoard step={this.state.step} round={this.state.round}/>
             </div>
         );
