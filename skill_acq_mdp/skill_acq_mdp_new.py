@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import numpy as np
 import matplotlib.pyplot as plt
 import csv
@@ -38,7 +40,7 @@ class Environment:
         d, k1, k2 = cur_state
         # if reaching the goal, d will be randomly set between [3, total_distance]
 
-        next_states = {}  # key: next_state, values: transition_prob, reward
+        next_states = defaultdict(list)  # key: next_state, values: transition_prob, reward
 
         # try skill 1
         if action == self.actions[0]:
@@ -48,7 +50,8 @@ class Environment:
                 # and reward = -1
                 reward = -1
 
-                next_states[(d, k1 - 1, k2)] = (1 - (1/k1), reward)
+                next_state = (1 - (1 / k1), reward)
+                next_states[(d, k1 - 1, k2)].append(next_state)
                 # print(f"next_state with action k1: {d, k1-1, k2}")
 
                 # if getting the skill 1, the player move one step further in obj-mdp, and get reward -1 if
@@ -58,7 +61,11 @@ class Environment:
                     reward = self.goal - 1
                     # reset the game environment
                     d = self.reset_distance()
-                next_states[(d, 1, k2)] = (1/k1, reward)
+                if (d, 1, k2) in next_states:
+                    next_states[(d, 1, k2)].append((1/k1, reward))
+                else:
+                    next_states[(d, 1, k2)] = [(1/k1, reward)]
+
                 # print(f"next_state with action k1: {d, 1, k2}")
 
             # if skill 1 is acquired
@@ -73,7 +80,7 @@ class Environment:
 
                 else:
                     reward = -1
-                next_states[(d, 1, k2)] = (1, reward)
+                next_states[(d, 1, k2)] = [(1, reward)]
                 # print(f"next_state with action k2: {d, 1, k2}")
 
         elif action == self.actions[1]:
@@ -81,7 +88,10 @@ class Environment:
             if k2 > 1:
                 # if getting error when trying skill 2, the player would get reward -1
                 reward = -1
-                next_states[(d, k1, k2 - 1)] = (1 - (1/k2), reward)
+                if (d, k1, k2 - 1) in next_states:
+                    next_states[(d, k1, k2 - 1)].append((1 - (1/k2), reward))
+                else:
+                    next_states[(d, k1, k2 - 1)] = [(1 - (1/k2), reward)]
                 # print(f"next_state with action k2: {d, k1, k2-1}")
 
                 # if getting the right key of skill 2, the player would get reward goal - 1
@@ -90,7 +100,10 @@ class Environment:
                 # reward = 2 * self.goal - 1
                 # d will be reset to a random number between 3 and total_distance, game reset
                 d = self.reset_distance()
-                next_states[(d, k1, 1)] = (1/k2, reward)
+                if (d, k1, 1) in next_states:
+                    next_states[(d, k1, 1)].append((1/k2, reward))
+                else:
+                    next_states[(d, k1, 1)] = [(1/k2, reward)]
                 # print(f"next_state with action k2: {d, k1, 1}")
 
 
@@ -102,7 +115,7 @@ class Environment:
                 # d = 0
                 # d will be reset to a random number between 3 and total_distance, game reset
                 d = self.reset_distance()
-                next_states[(d, k1, 1)] = (1, reward)
+                next_states[(d, k1, 1)] = [(1, reward)]
 
         return next_states
 
@@ -130,9 +143,11 @@ def policy_evaluation(policy, env):
 
                 next_states = env.step((d, k1, k2), actions[action])
 
-                for next_state, (state_prob, reward) in next_states.items():
-                    # print(f"next state: {next_state}")
-                    v += action_prob * state_prob * (reward + gamma * V[next_state])
+                for next_state, values in next_states.items():
+                    # print(f"values: {values}")
+                    for value in values:
+                        state_prob, reward = value
+                        v += action_prob * state_prob * (reward + gamma * V[next_state])
 
             delta = max(delta, np.abs(V[state] - v))
             V[state] = v
@@ -146,15 +161,20 @@ def policy_evaluation(policy, env):
 
 def one_step_lookahead(state, V, env):
     # print(f"state: {state}")
+    d, k1, k2 = state
     gamma = env.gamma
     actions = env.actions
     A = np.zeros(len(actions))
 
     for action in range(len(A)):
         next_states = env.step(state, actions[action])
-        for next_state, (state_prob, reward) in next_states.items():
-            A[action] += state_prob * (reward + gamma * V[next_state])
-
+        for next_state, values in next_states.items():
+            for value in values:
+                state_prob, reward = value
+                if d == 10 and k1 == 1 and k2 == 2:
+                    print(f"next states of state (10, 1, 1) when taking action {action}")
+                    print(f"next state: {next_state}, state_prob: {state_prob}, reward: {reward}")
+                A[action] += state_prob * (reward + gamma * V[next_state])
     return A
 
 
@@ -164,7 +184,6 @@ def policy_iteration(env):
     states = env.states
 
     policy = {state: np.ones(len(actions))/len(actions) for state in states}
-    action_values = np.zeros(2)
 
     while True:
 
@@ -178,9 +197,9 @@ def policy_iteration(env):
 
             chosen_a = np.argmax(policy[(d, k1, k2)])
             action_values = one_step_lookahead((d, k1, k2), V, env)
-            print(f"action_values at state{d, k1, k2}: {action_values}")
+            # print(f"action_values at state{d, k1, k2}: {action_values}")
             best_action = np.argmax(action_values)
-            print(f"best_action at state {d, k1, k2}: {best_action}")
+            # print(f"best_action at state {d, k1, k2}: {best_action}")
             if best_action != chosen_a:
                 policy_change += 1
                 policy_stable = False
@@ -189,7 +208,6 @@ def policy_iteration(env):
 
         if policy_stable:
             return policy, V
-
 
 
 def my_formular_vop(env):
@@ -277,7 +295,7 @@ def main():
     axs.scatter(y2, y3, label="action values of k2", alpha=0.5)
     axs.set_xlabel(f"action states value DP:(d={d}, k1={k1}, k2=(1, ... 26))")
     axs.set_ylabel(f"new VOP state value : (d={d}, k1={k1}, k2=(1, ... 26))")
-    plt.title("comparison of vop and opitmal state value from DP")
+    plt.title("comparison of vop and optimal state value from DP")
     plt.legend(loc="upper left")
     plt.show()
 
