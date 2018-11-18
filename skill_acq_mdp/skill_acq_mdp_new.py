@@ -190,48 +190,6 @@ def policy_iteration(env):
         if policy_stable:
             return policy, V
 
-#
-# def analytical_state_value(env):
-#     states = env.states
-#     V = {}
-#     gamma = env.gamma
-#     g = env.goal
-#     for state in states:
-#         d, k1, k2 = state
-#         # if d == 0:
-#         #     continue
-#         V[state] = max(((g / (1 - gamma)) - (k2 + 1) * (g - 1) / 2),
-#                        (g * np.floor(1 / ((1 - gamma) * d)) - (1 / (1 - gamma))))
-#         if d == 1 and k1 == 1:
-#             print(f"analytical_state_value at state ({state}): {((g / (1 - gamma)) - (k2 + 1) * (g - 1) / 2)}, "
-#                   f"{(g * np.floor(1 / ((1 - gamma) * d)) - (1 / (1 - gamma)))}")
-#
-#     return V
-
-
-# def VoP(analyt_opt_v, env):
-#     VoP = {}
-#     # states = env.states
-#     gamma = env.gamma
-#     g = env.goal
-#     distance = env.total_distance
-#     nS2 = env.nS2
-#     nS1 = env.nS1
-#     states = [(d, k1, k2) for d in range(1, distance + 1) for k1 in range(1, nS1 + 1) for k2 in range(1, nS2 + 1)]
-#
-#     for state in states:
-#         d, k1, k2 = state
-#         if k2 > 1:
-#             v = 1/k2 * (g - 1 + gamma * analyt_opt_v[d, k1, 1]) + \
-#                 (1 - 1/k2) * (-1 + gamma * analyt_opt_v[d, k1, (k2 - 1)])
-#             # VoP[state] = v - (g * np.floor(1 / ((1 - gamma) * distance)) - (1 / (1 - gamma)))
-#             VoP[state] = v
-#
-#         else:
-#             assert k2 == 1
-#             v = 1/k2 * (g - 1 + gamma * analyt_opt_v[d, k1, 1])
-#             VoP[state] = v
-#     return VoP
 
 
 def my_formular_vop(env):
@@ -303,7 +261,7 @@ def main():
 
     for state in states:
         d, k1, k2 = state
-        if d == total_distance -1 and k1 == 1:
+        if d == total_distance and k1 == 1:
             action_values = one_step_lookahead(state, optimal_V, env)
             # print(f"optimal_v at state{d, k1, k2}: {optimal_V[(d, k1, k2)]}")
             print(f"action_values at state {d, k1, k2}: {action_values}")
@@ -317,8 +275,8 @@ def main():
 
     assert len(y2) == len(y3)
     axs.scatter(y2, y3, label="action values of k2", alpha=0.5)
-    axs.set_xlabel("action states value DP:(d=10, k1=1, k2=(1, ... 26))")
-    axs.set_ylabel("new VOP state value : (d=10, k1=1, k2=(1, ... 26))")
+    axs.set_xlabel(f"action states value DP:(d={d}, k1={k1}, k2=(1, ... 26))")
+    axs.set_ylabel(f"new VOP state value : (d={d}, k1={k1}, k2=(1, ... 26))")
     plt.title("comparison of vop and opitmal state value from DP")
     plt.legend(loc="upper left")
     plt.show()

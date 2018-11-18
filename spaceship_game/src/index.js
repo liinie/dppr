@@ -92,6 +92,7 @@ class Layout extends React.Component {
             score: null,
             goal: null,
             episode_interrupt: null,
+            gamma: null,
         };
     }
 
@@ -150,6 +151,7 @@ class Layout extends React.Component {
                 episode_win: true,
                 score: this.state.score + this.state.goal,
             });
+            // TODO: freeze the function of steps count so that the
             setTimeout(()=>this.next_round_board(), 2000);
         }
 
@@ -157,8 +159,39 @@ class Layout extends React.Component {
     };
 
 
-    GameStatus = () =>{
+    resetBoard = () => {
+        this.next_round_board();
+        this.setState({
+            score: 0,
+        });
+    };
+
+
+    delayResetBoard = () => {
+        return setTimeout(()=>this.resetBoard(), 3000);
+    };
+
+
+    gameStatus = () =>{
             return <h2>step {this.state.step} / round {this.state.round}</h2>
+    };
+
+
+
+    getRandom = () => {
+        const crashRate = (Math.round((1 - this.state.gamma)*100)/100);
+        if (this.state.step >= 1){
+            if (Math.random() < crashRate) {
+                return (
+                    <div>
+                        <h2>Your space ship crashes </h2>
+                        <div> {this.delayResetBoard()}</div>
+                    </div>
+                );
+            }else {
+                return <h2>There is {crashRate*100} percent probability that your spaceship crashes in the next step!</h2>
+            }
+        }
     };
 
     componentDidMount() {
@@ -174,6 +207,7 @@ class Layout extends React.Component {
             round:1,
             goal: 10,
             score: 0,
+            gamma: 0.94,
         });
     }
 
@@ -187,13 +221,15 @@ class Layout extends React.Component {
         const instruction2 = "skill2: try [a-z] lower case letters to teleport the spaceship, so that your spaceship will reach the " +
             "dstination in one move";
 
-        const status = this.GameStatus();
+        const status = this.gameStatus();
+
         return(
             <div>
                 <h1 style={{ textAlign:'center'}}>{title}</h1>
-                <h3 className="instruction1">{instruction1}</h3>
-                <h3 className="instruction2">{instruction2}</h3>
+                <h2 className="instruction1">{instruction1}</h2>
+                <h2 className="instruction2">{instruction2}</h2>
                 <div className="game_status">{status}</div>
+                {/*<div>{this.getRandom()}</div>*/}
                 <AddScore
                     score={this.state.score}
                 />
