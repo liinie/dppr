@@ -18,7 +18,7 @@ class Environment:
     from the destination"""
 
     def __init__(self, gamma):
-        self.nS1 = 28
+        self.nS1 = 3
         self.nS2 = 26
         self.goal = 10
         self.gamma = gamma
@@ -28,7 +28,6 @@ class Environment:
                        for d in range(1, self.total_distance + 1)
                        for k1 in range(1, self.nS1 + 1)
                        for k2 in range(1, self.nS2 + 1)]
-
 
     def reset_distance(self):
         # return np.random.randint(4, self.total_distance + 1)
@@ -144,7 +143,7 @@ def policy_evaluation(policy, env):
                 next_states = env.step((d, k1, k2), actions[action])
 
                 for next_state, values in next_states.items():
-                    # print(f"values: {values}")
+                    # iterate all the values saved in one next state, in case there are more than 1 value tuples
                     for value in values:
                         state_prob, reward = value
                         v += action_prob * state_prob * (reward + gamma * V[next_state])
@@ -160,8 +159,6 @@ def policy_evaluation(policy, env):
 
 
 def one_step_lookahead(state, V, env):
-    # print(f"state: {state}")
-    d, k1, k2 = state
     gamma = env.gamma
     actions = env.actions
     A = np.zeros(len(actions))
@@ -171,9 +168,6 @@ def one_step_lookahead(state, V, env):
         for next_state, values in next_states.items():
             for value in values:
                 state_prob, reward = value
-                if d == 10 and k1 == 1 and k2 == 2:
-                    print(f"next states of state (10, 1, 1) when taking action {action}")
-                    print(f"next state: {next_state}, state_prob: {state_prob}, reward: {reward}")
                 A[action] += state_prob * (reward + gamma * V[next_state])
     return A
 
@@ -249,34 +243,11 @@ def my_formular_vop(env):
 #     return v_reshape
 
 
-def main():
-    env = Environment(0.94)
-    states = env.states
-    total_distance = env.total_distance
-
-
-
-    # optimal_policy, optimal_V, action_values = policy_iteration(env)
-
-    # optimal_V_reshape = reshape_v(optimal_V, env)
-    # print(f"optimal v reshape: {optimal_V_reshape}")
-
-    #plot optimal_V
-
-    optimal_policy, optimal_V = policy_iteration(env)
-    # # print vop, my_vop, optimal value
-    # analytical_optimal_V = analytical_state_value(env)
-    # Vop = VoP(analytical_optimal_V, env)
-    my_vop = my_formular_vop(env)
-
-
+def plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance):
     fig, axs = plt.subplots()
-
     y1 = []
     y2 = []
     y3 = []
-    y4 = []
-
     for state in states:
         d, k1, k2 = state
         if d == total_distance and k1 == 1:
@@ -289,8 +260,6 @@ def main():
             y1.append(optimal_V[state])
             y2.append(action_values[1])
             y3.append(my_vop[state])
-            # y4.append(Vop[state])
-
     assert len(y2) == len(y3)
     axs.scatter(y2, y3, label="action values of k2", alpha=0.5)
     axs.set_xlabel(f"action states value DP:(d={d}, k1={k1}, k2=(1, ... 26))")
@@ -298,6 +267,83 @@ def main():
     plt.title("comparison of vop and optimal state value from DP")
     plt.legend(loc="upper left")
     plt.show()
+
+
+def main():
+    gamma = 0.94
+    env = Environment(gamma)
+
+    actions = env.actions
+
+
+
+    optimal_policy, optimal_V = policy_iteration(env)
+
+    my_vop = my_formular_vop(env)
+
+    # plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
+
+
+    # simulation
+
+    time_steps = 100
+    initial_state = (10, env.nS1, env.nS2)
+    current_state = initial_state
+    participant_num = 1000
+
+    fig, axs = plt.subplots(1, 2)
+
+    crash_at = []
+    for j in range(participant_num):
+        stepwise_return = []
+
+        for i in range(time_steps):
+            # action = int(np.argmax(optimal_policy[current_state]))
+            action = 1
+            print(f"actions taken for current state {current_state}: {action}")
+            next_states = env.step(current_state, actions[action])
+            values_list = []
+            for ns, values in next_states.items():
+                print(f"ns: {ns}, values: {values}")
+                for value in values:
+                    values_list.append((value, ns))
+
+            reward_list = [v[1] for v, _ in values_list]
+            state_prob_list = [v[0] for v, _ in values_list]
+            next_state_list = [next_state for _, next_state in values_list]
+
+            # print(values_list)
+            # print(reward_list)
+            # print(state_prob_list)
+            # print(next_state_list)
+
+            chosen_reward = np.random.choice(reward_list, p=state_prob_list)
+            stepwise_return.append(chosen_reward)
+
+            print(f"chosen reward: {chosen_reward}")
+            next_state = None
+
+            for cr, ns in zip(reward_list, next_state_list):
+                if cr == chosen_reward:
+                    next_state = ns
+
+            if current_state == initial_state:
+                current_state = next_state
+            else:
+                crash = np.random.choice([True, False], p=[1-gamma, gamma])
+                if crash:
+                    crash_at.append(i)
+                    break
+                else:
+                    current_state = next_state
+
+        axs[0].plot(stepwise_return, label="returns using optimal policy")
+
+    axs[1].hist(crash_at)
+
+    plt.show()
+
+
 
 
 if __name__ == '__main__':
