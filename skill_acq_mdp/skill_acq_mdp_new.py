@@ -20,7 +20,7 @@ class Environment:
     def __init__(self, gamma):
         self.nS1 = 3
         self.nS2 = 26
-        self.goal = 10
+        self.goal = 20
         self.gamma = gamma
         self.actions = [1, 2]
         self.total_distance = 10
@@ -269,20 +269,74 @@ def plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance):
     plt.show()
 
 
+def roll_out(current_state, env, initial_state, policy, time_steps, crash_at):
+    actions = env.actions
+    gamma = env.gamma
+    cumulative_return = 0
+    cumulative_return_list = []
+    stepwise_return = []
+    for i in range(time_steps):
+        action = int(np.argmax(policy[current_state]))
+        # action = 1
+        # print(f"actions taken for current state {current_state}: {action}")
+        next_states = env.step(current_state, actions[action])
+        values_list = []
+        for ns, values in next_states.items():
+            # print(f"ns: {ns}, values: {values}")
+            for value in values:
+                values_list.append((value, ns))
+
+        reward_list = [v[1] for v, _ in values_list]
+        state_prob_list = [v[0] for v, _ in values_list]
+        next_state_list = [next_state for _, next_state in values_list]
+
+        # print(values_list)
+        # print(reward_list)
+        # print(state_prob_list)
+        # print(next_state_list)
+
+        chosen_reward = np.random.choice(reward_list, p=state_prob_list)
+        stepwise_return.append(chosen_reward)
+        cumulative_return += chosen_reward
+        cumulative_return_list.append(cumulative_return)
+
+        # print(f"chosen reward: {chosen_reward}")
+        next_state = None
+
+        for cr, ns in zip(reward_list, next_state_list):
+            if cr == chosen_reward:
+                next_state = ns
+
+        if current_state == initial_state:
+            current_state = next_state
+        else:
+            crash = np.random.choice([True, False], p=[1 - gamma, gamma])
+            if crash:
+                crash_at.append(i)
+                break
+            else:
+                current_state = next_state
+    return cumulative_return_list, stepwise_return
+
+
 def main():
     gamma = 0.94
     env = Environment(gamma)
 
     actions = env.actions
-
-
+    states = env.states
 
     optimal_policy, optimal_V = policy_iteration(env)
+    policy_only_skill_1 = {state: np.array([1, 0]) for state in states}
+    policy_only_skill_2 = {state: np.array([0, 1]) for state in states}
+
+    policies = {"optimal_policy": optimal_policy,
+                "policy_only_skill_1": policy_only_skill_1 ,
+                "policy_only_skill_2": policy_only_skill_2 }
 
     my_vop = my_formular_vop(env)
 
     # plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
-
 
     # simulation
 
@@ -291,59 +345,33 @@ def main():
     current_state = initial_state
     participant_num = 1000
 
-    fig, axs = plt.subplots(1, 2)
+    fig, axs = plt.subplots(1, 3)
+
+    stepwise_return_arr = np.empty((participant_num, time_steps))
+    cumulative_return_arr = np.empty((participant_num, time_steps))
 
     crash_at = []
-    for j in range(participant_num):
-        stepwise_return = []
+    for policy in policies.values():
+        for j in range(participant_num):
 
-        for i in range(time_steps):
-            # action = int(np.argmax(optimal_policy[current_state]))
-            action = 1
-            print(f"actions taken for current state {current_state}: {action}")
-            next_states = env.step(current_state, actions[action])
-            values_list = []
-            for ns, values in next_states.items():
-                print(f"ns: {ns}, values: {values}")
-                for value in values:
-                    values_list.append((value, ns))
+            cumulative_return_list, stepwise_return = roll_out(current_state, env, initial_state,
+                                                                         policy, time_steps, crash_at)
+            print(len(stepwise_return))
+            stepwise_return_arr[j, :len(stepwise_return)] = stepwise_return
+            cumulative_return_arr[j, :len(cumulative_return_list)] = cumulative_return_list
 
-            reward_list = [v[1] for v, _ in values_list]
-            state_prob_list = [v[0] for v, _ in values_list]
-            next_state_list = [next_state for _, next_state in values_list]
+        # TODO: add labels
+        # TODO: np.percentile
+        # TODO: fill_between
 
-            # print(values_list)
-            # print(reward_list)
-            # print(state_prob_list)
-            # print(next_state_list)
+        axs[0].plot(np.mean(stepwise_return_arr, axis=0))
+        axs[1].plot(np.mean(cumulative_return_arr, axis=0))
 
-            chosen_reward = np.random.choice(reward_list, p=state_prob_list)
-            stepwise_return.append(chosen_reward)
+        axs[2].hist(crash_at)
 
-            print(f"chosen reward: {chosen_reward}")
-            next_state = None
-
-            for cr, ns in zip(reward_list, next_state_list):
-                if cr == chosen_reward:
-                    next_state = ns
-
-            if current_state == initial_state:
-                current_state = next_state
-            else:
-                crash = np.random.choice([True, False], p=[1-gamma, gamma])
-                if crash:
-                    crash_at.append(i)
-                    break
-                else:
-                    current_state = next_state
-
-        axs[0].plot(stepwise_return, label="returns using optimal policy")
-
-    axs[1].hist(crash_at)
-
+    plt.legend()
+    plt.tight_layout()
     plt.show()
-
-
 
 
 if __name__ == '__main__':
