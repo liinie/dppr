@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 import matplotlib.pyplot as plt
-import csv
+import json
 import pandas as pd
 
 
@@ -269,18 +269,22 @@ def plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance):
     plt.show()
 
 
-def roll_out(current_state, env, initial_state, policy, time_steps, crash_at):
+def roll_out(current_state, env, initial_state, policy, time_steps, crash_at, survival_at):
     actions = env.actions
     gamma = env.gamma
     cumulative_return = 0
     cumulative_return_list = []
     stepwise_return = []
+    action_list = []
+
     for i in range(time_steps):
         action = int(np.argmax(policy[current_state]))
+        action_list.append(action)
         # action = 1
         # print(f"actions taken for current state {current_state}: {action}")
         next_states = env.step(current_state, actions[action])
         values_list = []
+
         for ns, values in next_states.items():
             # print(f"ns: {ns}, values: {values}")
             for value in values:
@@ -309,6 +313,7 @@ def roll_out(current_state, env, initial_state, policy, time_steps, crash_at):
 
         if current_state == initial_state:
             current_state = next_state
+            survival_at.append(i)
         else:
             crash = np.random.choice([True, False], p=[1 - gamma, gamma])
             if crash:
@@ -316,7 +321,9 @@ def roll_out(current_state, env, initial_state, policy, time_steps, crash_at):
                 break
             else:
                 current_state = next_state
-    return cumulative_return_list, stepwise_return
+                survival_at.append(i)
+
+    return cumulative_return_list, stepwise_return, action_list
 
 
 def main():
@@ -330,9 +337,11 @@ def main():
     policy_only_skill_1 = {state: np.array([1, 0]) for state in states}
     policy_only_skill_2 = {state: np.array([0, 1]) for state in states}
 
+    # print(f"optimal policy: {optimal_policy}")
+
     policies = {"optimal_policy": optimal_policy,
-                "policy_only_skill_1": policy_only_skill_1 ,
-                "policy_only_skill_2": policy_only_skill_2 }
+                "policy_only_skill_1": policy_only_skill_1,
+                "policy_only_skill_2": policy_only_skill_2}
 
     my_vop = my_formular_vop(env)
 
@@ -340,38 +349,66 @@ def main():
 
     # simulation
 
-    time_steps = 100
+    time_steps = 80
     initial_state = (10, env.nS1, env.nS2)
     current_state = initial_state
     participant_num = 1000
 
-    fig, axs = plt.subplots(1, 3)
+    fig, axs = plt.subplots(2, 2)
 
-    stepwise_return_arr = np.empty((participant_num, time_steps))
-    cumulative_return_arr = np.empty((participant_num, time_steps))
+    best_scores = {}
 
-    crash_at = []
-    for policy in policies.values():
+    for policy_name, policy in policies.items():
+
+        crash_at = []
+        survival_at = []
+
+        stepwise_return_arr = np.zeros((participant_num, time_steps))
+        # save cumulative return of all participants in numpy array
+        cumulative_return_arr = np.zeros((participant_num, time_steps))
+
         for j in range(participant_num):
 
-            cumulative_return_list, stepwise_return = roll_out(current_state, env, initial_state,
-                                                                         policy, time_steps, crash_at)
-            print(len(stepwise_return))
+            cumulative_return_list, stepwise_return, action_list = roll_out(current_state, env,
+                                                                                       initial_state, policy,
+                                                                                       time_steps, crash_at,
+                                                                                       survival_at)
+
             stepwise_return_arr[j, :len(stepwise_return)] = stepwise_return
             cumulative_return_arr[j, :len(cumulative_return_list)] = cumulative_return_list
+            cumulative_return_arr[j, len(cumulative_return_list):] = cumulative_return_list[-1]
 
-        # TODO: add labels
-        # TODO: np.percentile
-        # TODO: fill_between
+        # get the best 10 scores from the cumulative returns every time step
+        cra = cumulative_return_arr.copy()
+        cra[::-1, :].sort(axis=0)
+        cra_copy = cra[:10, :].tolist()
 
-        axs[0].plot(np.mean(stepwise_return_arr, axis=0))
-        axs[1].plot(np.mean(cumulative_return_arr, axis=0))
+        # save the 10 best scores of all policies in a dictionary
+        best_scores[policy_name] = cra_copy
+        # print(f"number of crashes with policy {policy_name}: {len(crash_at)}")
+        x = np.arange(time_steps)
 
-        axs[2].hist(crash_at)
+        axs[0, 0].scatter(x, np.median(stepwise_return_arr, axis=0), label=policy_name, alpha=0.5)
+        axs[0, 0].fill_between(x, np.percentile(stepwise_return_arr, 25, axis=0),
+                               np.percentile(stepwise_return_arr, 75, axis=0), alpha=0.2)
+        axs[0, 0].set_title("median of stepwise returns")
+
+        axs[0, 1].plot(np.median(cumulative_return_arr, axis=0), label=policy_name)
+        axs[0, 1].set_title("median of cumulative returns")
+        axs[0, 1].fill_between(x, np.percentile(cumulative_return_arr, 25, axis=0),
+                               np.percentile(cumulative_return_arr, 75, axis=0), alpha=0.2)
+
+        axs[1, 0].hist(crash_at, alpha=0.5, rwidth=0.92, label=policy_name)
+        axs[1, 0].set_title("crash at")
+        axs[1, 1].hist(survival_at, alpha=0.5, rwidth=0.92, label=policy_name)
+        axs[1, 1].set_title("survival at")
 
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+    with open('best_score_list.json', 'w') as fp:
+        json.dump(best_scores, fp)
 
 
 if __name__ == '__main__':
