@@ -1,6 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
+import App from './App';
+import * as serviceWorker from './serviceWorker';
+import RankList from "./RankList";
 
 
 class Square extends React.Component{
@@ -47,29 +50,10 @@ class Board extends React.Component{
 }
 
 
-class RankingBoard extends React.Component {
-    render(){
-        return(
-            <div>
-                <h2 className="steps"> spaceship heroes ranking board
-                    after step {this.props.step} in round {this.props.round}</h2>
-
-
-                <ol>
-                    <li>A. Turing: 10</li>
-                    <li>J. Neumann: 10</li>
-                    <li>J. Tennenbaum: 10</li>
-                    <li>A. Einstein: 10</li>
-                </ol>
-            </div>
-        );
-    }
-}
-
 class AddScore extends React.Component {
     render(){
         return (
-            <h2>Your score is: {this.props.score}</h2>
+            <p>Your score is: {this.props.score}</p>
         );
     }
 
@@ -93,16 +77,14 @@ class Layout extends React.Component {
             goal: null,
             episode_interrupt: null,
             gamma: null,
+            totalStep: null,
+            crash: false,
         };
     }
 
     checkEpisodeWin = () => {
         if (this.state.current_state_row === this.state.end_state_row &&
             this.state.current_state_col === this.state.end_state_col) {
-            this.setState({
-                episode_win: true,
-                score: this.state.score + this.state.goal,
-            });
             return true
         } else {
             return false
@@ -119,20 +101,41 @@ class Layout extends React.Component {
         });
     };
 
+
+    checkCrash = () => {
+        const crashRate = (Math.round((1 - this.state.gamma)*100)/100);
+        if (Math.random() < crashRate) {
+            this.setState({
+                crash: true,
+            });
+        }
+    };
+
     handleKeyPress = (e) =>{
 
         this.setState({
             currentKey: e.key,
             step: this.state.step + 1,
             score: this.state.score - 1,
+            totalStep: this.state.totalStep +1,
         });
+
+        if (this.state.totalStep >= 1){
+            this.checkCrash();
+        }
+
         if (e.key === "ArrowRight") {
             if (this.state.current_state_col + 1 <= 5){
                 this.setState({
                     current_state_col: this.state.current_state_col + 1,
                 });
                 if (this.checkEpisodeWin()) {
-                    setTimeout(()=>this.next_round_board(), 2000);
+                    this.setState({
+                        episode_win: true,
+                        score: this.state.score + this.state.goal,
+                    });
+                    // setTimeout(()=>this.next_round_board(), 1000);
+                    this.next_round_board()
                 }
             }
         }else if (e.key === "ArrowUp") {
@@ -141,7 +144,12 @@ class Layout extends React.Component {
                     current_state_row: this.state.current_state_row - 1
                 });
                 if (this.checkEpisodeWin()) {
-                    setTimeout(()=>this.next_round_board(), 2000);
+                    this.setState({
+                        episode_win: true,
+                        score: this.state.score + this.state.goal,
+                    });
+                    // setTimeout(()=>this.next_round_board(), 1000);
+                    this.next_round_board()
                 }
             }
         }else if (e.key === this.state.teleportationKey){
@@ -152,9 +160,15 @@ class Layout extends React.Component {
                 score: this.state.score + this.state.goal,
             });
             // TODO: freeze the function of steps count so that the
-            setTimeout(()=>this.next_round_board(), 2000);
+            if (this.checkEpisodeWin()){
+                this.setState({
+                    episode_win: true,
+                    score: this.state.score + this.state.goal,
+                });
+                // setTimeout(()=>{this.next_round_board()}, 1000);
+                this.next_round_board()
+            }
         }
-
 
     };
 
@@ -167,35 +181,20 @@ class Layout extends React.Component {
     };
 
 
-    delayResetBoard = () => {
-        return setTimeout(()=>this.resetBoard(), 3000);
-    };
-
-
     gameStatus = () =>{
-            return <h2>step {this.state.step} / round {this.state.round}</h2>
+        return <p>step {this.state.step} / round {this.state.round}</p>
+    };
+
+    showCrashMessage= () =>{
+        this.componentWillUnmount();
+        return <p>Your spaceship crashes, game over!</p>
     };
 
 
-
-    getRandom = () => {
-        const crashRate = (Math.round((1 - this.state.gamma)*100)/100);
-        if (this.state.step >= 1){
-            if (Math.random() < crashRate) {
-                return (
-                    <div>
-                        <h2>Your space ship crashes </h2>
-                        <div> {this.delayResetBoard()}</div>
-                    </div>
-                );
-            }else {
-                return <h2>There is {crashRate*100} percent probability that your spaceship crashes in the next step!</h2>
-            }
-        }
-    };
 
     componentDidMount() {
         document.addEventListener('keydown', this.handleKeyPress);
+
         this.setState({
             current_state_row: 5,
             current_state_col: 0,
@@ -208,6 +207,8 @@ class Layout extends React.Component {
             goal: 10,
             score: 0,
             gamma: 0.94,
+            totalStep: 0,
+            crash: false,
         });
     }
 
@@ -217,7 +218,7 @@ class Layout extends React.Component {
 
     render() {
         const title = "Spaceship Adventure";
-        const instruction1 = "skill1: try arrows keys to move. Hint: ArrowUp moves your spaceship up.";
+        const instruction1 = "skill1: try arrow keys to move. Hint: ArrowUp moves your spaceship up.";
         const instruction2 = "skill2: try [a-z] lower case letters to teleport the spaceship, so that your spaceship will reach the " +
             "dstination in one move";
 
@@ -226,10 +227,14 @@ class Layout extends React.Component {
         return(
             <div>
                 <h1 style={{ textAlign:'center'}}>{title}</h1>
-                <h2 className="instruction1">{instruction1}</h2>
-                <h2 className="instruction2">{instruction2}</h2>
+                <h3 className="instruction1">{instruction1}</h3>
+                <h3 className="instruction2">{instruction2}</h3>
                 <div className="game_status">{status}</div>
-                {/*<div>{this.getRandom()}</div>*/}
+                <p>Your total step: {this.state.totalStep}</p>
+                <p>There is a {Math.round((1-this.state.gamma)*100)} percent probability that
+                    your spaceship will crash in the next step!
+                </p>
+                <div>{this.state.crash && this.showCrashMessage()}</div>
                 <AddScore
                     score={this.state.score}
                 />
@@ -239,15 +244,18 @@ class Layout extends React.Component {
                     end_state_row={this.state.end_state_row}
                     end_state_col={this.state.end_state_col}
                 />
-                <h2>The last key you pressed: {this.state.currentKey}</h2>
-                <RankingBoard step={this.state.step} round={this.state.round}/>
+                <p>The last key you pressed: {this.state.currentKey}</p>
+                <RankList totalStep={this.state.totalStep}/>
             </div>
         );
     }
 }
 
 
-ReactDOM.render(
-    <Layout/>,
-    document.getElementById('root')
-);
+// ReactDOM.render(<App />, document.getElementById('root'));
+ReactDOM.render(<Layout />, document.getElementById('root'));
+
+// If you want your app to work offline and load faster, you can change
+// unregister() to register() below. Note this comes with some pitfalls.
+// Learn more about service workers: http://bit.ly/CRA-PWA
+serviceWorker.unregister();

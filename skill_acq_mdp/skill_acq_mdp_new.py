@@ -3,6 +3,9 @@ from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+from mpl_toolkits.mplot3d import Axes3D
+
+import seaborn as sns
 import pandas as pd
 
 
@@ -326,36 +329,13 @@ def roll_out(current_state, env, initial_state, policy, time_steps, crash_at, su
     return cumulative_return_list, stepwise_return, action_list
 
 
-def main():
-    gamma = 0.94
-    env = Environment(gamma)
-
-    actions = env.actions
-    states = env.states
-
-    optimal_policy, optimal_V = policy_iteration(env)
-    policy_only_skill_1 = {state: np.array([1, 0]) for state in states}
-    policy_only_skill_2 = {state: np.array([0, 1]) for state in states}
-
-    # print(f"optimal policy: {optimal_policy}")
-
-    policies = {"optimal_policy": optimal_policy,
-                "policy_only_skill_1": policy_only_skill_1,
-                "policy_only_skill_2": policy_only_skill_2}
-
-    my_vop = my_formular_vop(env)
-
-    # plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
-
+def simulation(env, policies):
     # simulation
-
     time_steps = 80
     initial_state = (10, env.nS1, env.nS2)
     current_state = initial_state
     participant_num = 1000
-
     fig, axs = plt.subplots(2, 2)
-
     best_scores = {}
 
     for policy_name, policy in policies.items():
@@ -368,11 +348,10 @@ def main():
         cumulative_return_arr = np.zeros((participant_num, time_steps))
 
         for j in range(participant_num):
-
             cumulative_return_list, stepwise_return, action_list = roll_out(current_state, env,
-                                                                                       initial_state, policy,
-                                                                                       time_steps, crash_at,
-                                                                                       survival_at)
+                                                                            initial_state, policy,
+                                                                            time_steps, crash_at,
+                                                                            survival_at)
 
             stepwise_return_arr[j, :len(stepwise_return)] = stepwise_return
             cumulative_return_arr[j, :len(cumulative_return_list)] = cumulative_return_list
@@ -402,13 +381,77 @@ def main():
         axs[1, 0].set_title("crash at")
         axs[1, 1].hist(survival_at, alpha=0.5, rwidth=0.92, label=policy_name)
         axs[1, 1].set_title("survival at")
-
     plt.legend()
     plt.tight_layout()
     plt.show()
-
     with open('best_score_list.json', 'w') as fp:
         json.dump(best_scores, fp)
+
+
+def plot_gamma_skill_values(policy_only_skill_1, policy_only_skill_2):
+    V1_initial = []
+    V2_initial = []
+    for gamma in np.linspace(0.1, 0.9, 9):
+        env = Environment(gamma)
+        V1 = policy_evaluation(policy_only_skill_1, env)
+        V2 = policy_evaluation(policy_only_skill_2, env)
+        V1_initial.append(V1[(env.total_distance, env.nS1, env.nS2)])
+        V2_initial.append(V2[(env.total_distance, env.nS1, env.nS2)])
+    fig, ax = plt.subplots()
+    ax.plot(V1_initial, label="skill 1")
+    ax.plot(V2_initial, label="skill 2")
+    ax.set_xticklabels([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+    plt.legend()
+    plt.show()
+
+
+def main():
+    gamma = 0.94
+    env = Environment(gamma)
+
+    actions = env.actions
+    states = env.states
+
+    optimal_policy, optimal_V = policy_iteration(env)
+    policy_only_skill_1 = {state: np.array([1, 0]) for state in states}
+    policy_only_skill_2 = {state: np.array([0, 1]) for state in states}
+
+    # print(f"optimal policy: {optimal_policy}")
+
+    policies = {"optimal_policy": optimal_policy,
+                "policy_only_skill_1": policy_only_skill_1,
+                "policy_only_skill_2": policy_only_skill_2}
+
+    my_vop = my_formular_vop(env)
+
+    Z = np.zeros((10, 10))
+    k1 = env.nS1
+    k2 = env.nS2
+
+    fig, ax = plt.subplots()
+
+    for i, gamma in enumerate(np.linspace(0.05, 0.95, 10)):
+        env = Environment(gamma)
+
+        V1 = policy_evaluation(policy_only_skill_1, env)
+        V2 = policy_evaluation(policy_only_skill_2, env)
+
+        for j, d in enumerate(reversed(range(1, 11))):
+            Z[i, j] = V1[(d, k1, k2)] - V2[(d, k1, k2)]
+
+    plt.imshow(Z)
+    plt.xlabel("Distance")
+    # ax.set_xticklabels(list(reversed(range(1, 11))))
+    plt.ylabel("Gamma")
+    # ax.set_ytickslabels(np.linspace(0.05, 0.95, 10))
+    plt.colorbar()
+    plt.show()
+
+    plot_gamma_skill_values(policy_only_skill_1, policy_only_skill_2)
+
+    # plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
+
+    # simulation(env, policies)
 
 
 if __name__ == '__main__':
