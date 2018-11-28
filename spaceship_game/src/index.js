@@ -1,9 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import App from './App';
+import Intro from './Intro';
 import * as serviceWorker from './serviceWorker';
 import RankList from "./RankList";
+import negative_sound from './assets/negative_sound.mp3'
+import positive_sound from './assets/positive_sound.mp3'
+import Sidebar from "./sidebar";
+
+
 
 
 class Square extends React.Component{
@@ -20,7 +25,7 @@ class Board extends React.Component{
         const board = g.map((row, i) => { return (
             <tr key={"row_"+i}>
                 {row.map((col, j) => {
-                    console.log([i, j]);
+                    // console.log([i, j]);
                     if (i === this.props.current_state_row && j === this.props.current_state_col) {
                         return <Square value={'X'}/>;
                     } else if (i === this.props.end_state_row && j === this.props.end_state_col){
@@ -42,7 +47,6 @@ class Board extends React.Component{
                     </table>
                 </div>
                 <br />
-                {/*<Button onClick={this.handleReset} />*/}
             </div>
         )
 
@@ -52,13 +56,37 @@ class Board extends React.Component{
 
 class AddScore extends React.Component {
     render(){
+        const scoreColor = this.props.score <= 0 ? "red": "green";
+
         return (
-            <p>Your score is: {this.props.score}</p>
+            <p>Your score is:
+                <span style={{color: scoreColor}}> {this.props.score}</span></p>
         );
     }
-
 }
 
+class LogFile extends React.Component {
+
+    getLogFile = () =>{
+        const jsObj = JSON.stringify(this.props.keyPressHist);
+
+        var hiddenElement = document.createElement("a");
+        hiddenElement.href =
+            "data:text/json;charset=utf-8," + encodeURIComponent(jsObj);
+        hiddenElement.target = "_blank";
+        hiddenElement.download = "logfile.json";
+        hiddenElement.click();
+    };
+
+    render(){
+        return (
+            <div>
+                {this.getLogFile()}
+            </div>
+        );
+
+    }
+}
 
 class Layout extends React.Component {
     constructor(props){
@@ -79,7 +107,15 @@ class Layout extends React.Component {
             gamma: null,
             totalStep: null,
             crash: false,
+            sidebarOpen: true,
+            keyPressHist: [],
+            // scoreIncrease:false,
         };
+        this.onSetSidebarOpen = this.onSetSidebarOpen.bind(this);
+    }
+
+    onSetSidebarOpen(open) {
+        this.setState({ sidebarOpen: open });
     }
 
     checkEpisodeWin = () => {
@@ -111,14 +147,18 @@ class Layout extends React.Component {
         }
     };
 
-    handleKeyPress = (e) =>{
 
+    handleKeyPress = (e) =>{
         this.setState({
             currentKey: e.key,
             step: this.state.step + 1,
             score: this.state.score - 1,
             totalStep: this.state.totalStep +1,
         });
+
+        this.setState(previousState => ({
+            keyPressHist: [...previousState.keyPressHist, {currentKey: e.key}]
+        }));
 
         if (this.state.totalStep >= 1){
             this.checkCrash();
@@ -129,29 +169,15 @@ class Layout extends React.Component {
                 this.setState({
                     current_state_col: this.state.current_state_col + 1,
                 });
-                if (this.checkEpisodeWin()) {
-                    this.setState({
-                        episode_win: true,
-                        score: this.state.score + this.state.goal,
-                    });
-                    // setTimeout(()=>this.next_round_board(), 1000);
-                    this.next_round_board()
-                }
             }
+            this.checkGameStatus();
         }else if (e.key === "ArrowUp") {
             if (this.state.current_state_row - 1 >= 0){
                 this.setState({
                     current_state_row: this.state.current_state_row - 1
                 });
-                if (this.checkEpisodeWin()) {
-                    this.setState({
-                        episode_win: true,
-                        score: this.state.score + this.state.goal,
-                    });
-                    // setTimeout(()=>this.next_round_board(), 1000);
-                    this.next_round_board()
-                }
             }
+          this.checkGameStatus();
         }else if (e.key === this.state.teleportationKey){
             this.setState({
                 current_state_row: this.state.end_state_row,
@@ -160,26 +186,23 @@ class Layout extends React.Component {
                 score: this.state.score + this.state.goal,
             });
             // TODO: freeze the function of steps count so that the
-            if (this.checkEpisodeWin()){
-                this.setState({
-                    episode_win: true,
-                    score: this.state.score + this.state.goal,
-                });
-                // setTimeout(()=>{this.next_round_board()}, 1000);
-                this.next_round_board()
-            }
+            this.checkGameStatus();
         }
-
     };
 
-
-    resetBoard = () => {
-        this.next_round_board();
-        this.setState({
-            score: 0,
-        });
-    };
-
+    checkGameStatus() {
+        if (this.checkEpisodeWin()) {
+            this.setState({
+                episode_win: true,
+                score: this.state.score + this.state.goal,
+            });
+            // setTimeout(()=>this.next_round_board(), 1000);
+            document.getElementById('positive_sound').play();
+            this.next_round_board()
+        } else {
+            document.getElementById('negative_sound').play();
+        }
+    }
 
     gameStatus = () =>{
         return <p>step {this.state.step} / round {this.state.round}</p>
@@ -187,7 +210,7 @@ class Layout extends React.Component {
 
     showCrashMessage= () =>{
         this.componentWillUnmount();
-        return <p>Your spaceship crashes, game over!</p>
+        return <p>Your spaceship crashes, game over, thanks for playing!</p>
     };
 
 
@@ -204,7 +227,7 @@ class Layout extends React.Component {
             episode_win:false,
             step:0,
             round:1,
-            goal: 10,
+            goal: 20,
             score: 0,
             gamma: 0.94,
             totalStep: 0,
@@ -212,9 +235,11 @@ class Layout extends React.Component {
         });
     }
 
+
     componentWillUnmount() {
         document.removeEventListener('keydown', this.handleKeyPress);
     }
+
 
     render() {
         const title = "Spaceship Adventure";
@@ -226,6 +251,16 @@ class Layout extends React.Component {
 
         return(
             <div>
+                {/*<Intro/>*/}
+                {/*<Sidebar*/}
+                    {/*sidebar={<b>Sidebar content</b>}*/}
+                    {/*open={this.state.sidebarOpen}*/}
+                    {/*onSetOpen={this.onSetSidebarOpen}*/}
+                    {/*styles={{ sidebar: { background: "white" } }}>*/}
+                    {/*<button onClick={() => this.onSetSidebarOpen(true)}>*/}
+                        {/*Open sidebar*/}
+                    {/*</button>*/}
+                {/*</Sidebar>*/}
                 <h1 style={{ textAlign:'center'}}>{title}</h1>
                 <h3 className="instruction1">{instruction1}</h3>
                 <h3 className="instruction2">{instruction2}</h3>
@@ -245,14 +280,18 @@ class Layout extends React.Component {
                     end_state_col={this.state.end_state_col}
                 />
                 <p>The last key you pressed: {this.state.currentKey}</p>
+                <audio id="negative_sound" src={negative_sound}/>
+                <audio id="positive_sound" src={positive_sound}/>
                 <RankList totalStep={this.state.totalStep}/>
+                {this.state.crash && <LogFile keyPressHist={this.state.keyPressHist}/>}
             </div>
         );
     }
 }
 
 
-// ReactDOM.render(<App />, document.getElementById('root'));
+
+// ReactDOM.render(<Intro />, document.getElementById('root'));
 ReactDOM.render(<Layout />, document.getElementById('root'));
 
 // If you want your app to work offline and load faster, you can change
