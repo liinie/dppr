@@ -147,47 +147,63 @@ class Layout extends React.Component {
         }
     };
 
-
+    
     handleKeyPress = (e) =>{
-        this.setState({
-            currentKey: e.key,
-            step: this.state.step + 1,
-            score: this.state.score - 1,
-            totalStep: this.state.totalStep +1,
-        });
+        if ((e.key === "ArrowRight" ||
+            e.key === "ArrowUp" ||
+            e.key ===this.state.teleportationKey) ||
+            (((97 <= e.key.charCodeAt(0) &&
+                e.key.charCodeAt(0) <= 122) ||
+                e.key === "ArrowLeft" ||
+                e.key === "ArrowDown")&&
+            !this.state.keyPressHist.includes(e.key))){
 
-        this.setState(previousState => ({
-            keyPressHist: [...previousState.keyPressHist, {currentKey: e.key}]
-        }));
-
-        if (this.state.totalStep >= 1){
-            this.checkCrash();
-        }
-
-        if (e.key === "ArrowRight") {
-            if (this.state.current_state_col + 1 <= 5){
-                this.setState({
-                    current_state_col: this.state.current_state_col + 1,
-                });
-            }
-            this.checkGameStatus();
-        }else if (e.key === "ArrowUp") {
-            if (this.state.current_state_row - 1 >= 0){
-                this.setState({
-                    current_state_row: this.state.current_state_row - 1
-                });
-            }
-          this.checkGameStatus();
-        }else if (e.key === this.state.teleportationKey){
+            console.log(e.key.charCodeAt(0));
             this.setState({
-                current_state_row: this.state.end_state_row,
-                current_state_col: this.state.end_state_col,
-                episode_win: true,
-                score: this.state.score + this.state.goal,
+                currentKey: e.key,
+                step: this.state.step + 1,
+                score: this.state.score - 1,
+                totalStep: this.state.totalStep +1,
             });
-            // TODO: freeze the function of steps count so that the
-            this.checkGameStatus();
+
+            this.setState(previousState => ({
+                keyPressHist: [...previousState.keyPressHist, e.key]
+            }));
+
+            if (this.state.totalStep >= 1){
+                this.checkCrash();
+            }
+
+            if (e.key === "ArrowRight") {
+                if (this.state.current_state_col + 1 <= 5){
+                    this.setState({
+                        current_state_col: this.state.current_state_col + 1,
+                    });
+                }
+                this.checkGameStatus();
+            }else if (e.key === "ArrowUp") {
+                if (this.state.current_state_row - 1 >= 0){
+                    this.setState({
+                        current_state_row: this.state.current_state_row - 1
+                    });
+                }
+              this.checkGameStatus();
+            }else if (e.key === this.state.teleportationKey){
+                this.setState({
+                    current_state_row: this.state.end_state_row,
+                    current_state_col: this.state.end_state_col,
+                    episode_win: true,
+                    score: this.state.score + this.state.goal,
+                });
+                // TODO: freeze the function of steps count so that the
+                this.checkGameStatus();
+            }else{
+               document.getElementById('negative_sound').play();
+            }
+        }else{
+
         }
+
     };
 
     checkGameStatus() {
@@ -279,7 +295,7 @@ class Layout extends React.Component {
                     end_state_row={this.state.end_state_row}
                     end_state_col={this.state.end_state_col}
                 />
-                <p>The last key you pressed: {this.state.currentKey}</p>
+                <p>The last key(s) you pressed: {this.state.keyPressHist}</p>
                 <audio id="negative_sound" src={negative_sound}/>
                 <audio id="positive_sound" src={positive_sound}/>
                 <RankList totalStep={this.state.totalStep}/>

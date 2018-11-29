@@ -11,7 +11,7 @@ class Intro extends Component {
         <header className="App-header">
           <img src={spaceShipLogo} className="App-logo" alt="logo" />
           <div className='empty_space'>{' '}</div>
-            {/*<Link to="game">Enter Spaceship game</Link>*/}
+            <a>Enter Spaceship game</a>
         </header>
       </div>
     );
