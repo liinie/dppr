@@ -147,7 +147,7 @@ class Layout extends React.Component {
         }
     };
 
-    
+
     handleKeyPress = (e) =>{
         if ((e.key === "ArrowRight" ||
             e.key === "ArrowUp" ||
