@@ -1,0 +1,3 @@
+[submodule "spaceship_game/build"]
+	path = spaceship_game/build
+	url = https://github.com/liinie/dppr.git
