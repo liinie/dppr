@@ -299,7 +299,7 @@ class Layout extends React.Component {
                 <audio id="negative_sound" src={negative_sound}/>
                 <audio id="positive_sound" src={positive_sound}/>
                 <RankList totalStep={this.state.totalStep}/>
-                {this.state.crash && <LogFile keyPressHist={this.state.keyPressHist}/>}
+                {/*{this.state.crash && <LogFile keyPressHist={this.state.keyPressHist}/>}*/}
             </div>
         );
     }

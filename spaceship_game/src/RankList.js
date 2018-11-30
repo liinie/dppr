@@ -15,7 +15,8 @@ class RankList extends Component {
                     return (
                         <div>
                             <li>{data.id}: {data.name} {data.score.map((scoreData, index) =>{
-                                if(index === ((this.props.totalStep/10) - 1)){return <div>{scoreData}</div>}
+                                if(index === ((this.props.totalStep/10) - 1))
+                                return <div>{scoreData}</div>
                                 }
                             )}</li>
                         </div>
