@@ -1,16 +1,16 @@
 {
-  "main.css": "/dppr/static/css/main.9c803d5e.chunk.css",
-  "main.js": "/dppr/static/js/main.4116a85b.chunk.js",
-  "main.js.map": "/dppr/static/js/main.4116a85b.chunk.js.map",
+  "main.css": "/dppr/static/css/main.71e1195b.chunk.css",
+  "main.js": "/dppr/static/js/main.8ae7a0fc.chunk.js",
+  "main.js.map": "/dppr/static/js/main.8ae7a0fc.chunk.js.map",
   "static/js/1.14825788.chunk.js": "/dppr/static/js/1.14825788.chunk.js",
   "static/js/1.14825788.chunk.js.map": "/dppr/static/js/1.14825788.chunk.js.map",
   "runtime~main.js": "/dppr/static/js/runtime~main.3d76a1e6.js",
   "runtime~main.js.map": "/dppr/static/js/runtime~main.3d76a1e6.js.map",
-  "static/css/main.9c803d5e.chunk.css.map": "/dppr/static/css/main.9c803d5e.chunk.css.map",
+  "static/css/main.71e1195b.chunk.css.map": "/dppr/static/css/main.71e1195b.chunk.css.map",
   "static/media/spaceship.svg": "/dppr/static/media/spaceship.57a23070.svg",
   "static/media/positive_sound.mp3": "/dppr/static/media/positive_sound.13559345.mp3",
   "static/media/negative_sound.mp3": "/dppr/static/media/negative_sound.dad0bcc7.mp3",
   "index.html": "/dppr/index.html",
-  "precache-manifest.d05aacd66e8b8edf362b69326fdddf10.js": "/dppr/precache-manifest.d05aacd66e8b8edf362b69326fdddf10.js",
+  "precache-manifest.a9c7804e41071381e3b0f0b9755fbf81.js": "/dppr/precache-manifest.a9c7804e41071381e3b0f0b9755fbf81.js",
   "service-worker.js": "/dppr/service-worker.js"
 }
