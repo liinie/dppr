@@ -1,13 +1,15 @@
 import React from "react";
-import Board from '../components/Board';
-import AddScore from '../components/AddScore';
-import RankList from '../components/RankList';
-import negative_sound from '../assets/negative_sound.mp3';
-import positive_sound from '../assets/positive_sound.mp3';
-import LogFile from '../components/LogFile';
-import Sidebar from '../components/Sidebar';
+import Board from './components/Board';
+import AddScore from './components/AddScore';
+import RankList from './components/RankList';
+import negative_sound from './assets/negative_sound.mp3';
+import positive_sound from './assets/positive_sound.mp3';
+import LogFile from './components/LogFile';
+import Sidebar from './components/Sidebar';
+import { Redirect } from 'react-router';
+import {Link} from 'react-router-dom';
 
-class Layout extends React.Component {
+class GamePage extends React.Component {
     constructor(props){
         super(props);
         this.state = {
@@ -114,10 +116,12 @@ class Layout extends React.Component {
                     episode_win: true,
                     score: this.state.score + this.state.goal,
                 });
-                // TODO: freeze the function of steps count so that the
+                // TODO: freeze the function of steps count
                 this.checkGameStatus();
             }else{
-                document.getElementById('negative_sound').play();
+                if (!this.state.crash){
+                    document.getElementById('negative_sound').play();
+                }
             }
         }else{
 
@@ -133,9 +137,16 @@ class Layout extends React.Component {
             });
             // setTimeout(()=>this.next_round_board(), 1000);
             document.getElementById('positive_sound').play();
-            this.next_round_board()
+
+            let wait = ms => new Promise((r, j) => setTimeout(r, ms));
+            let prom = wait(2000);
+            let show_next_round = () => this.next_round_board();
+            prom.then(show_next_round())
+
         } else {
-            document.getElementById('negative_sound').play();
+            if (!this.state.crash){
+                document.getElementById('negative_sound').play();
+            }
         }
     }
 
@@ -143,7 +154,7 @@ class Layout extends React.Component {
         return <p>step {this.state.step} / round {this.state.round}</p>
     };
 
-    showCrashMessage= () =>{
+    showCrashMessage = () =>{
         this.componentWillUnmount();
         return <p>Your spaceship crashes, game over, thanks for playing!</p>
     };
@@ -167,6 +178,7 @@ class Layout extends React.Component {
             gamma: 0.94,
             totalStep: 0,
             crash: false,
+            sidebarOpen:false,
         });
     }
 
@@ -179,37 +191,36 @@ class Layout extends React.Component {
     render() {
         const title = "Spaceship Adventure";
         const instruction1 = "skill1: try arrow keys to move. Hint: ArrowUp moves your spaceship up.";
-        const instruction2 = "skill2: try [a-z] lower case letters to teleport the spaceship, so that your spaceship will reach the " +
-            "dstination in one move";
+        const instruction2 = "skill2: try [a-z] lower case letters to teleport the spaceship, " +
+            "so that your spaceship will reach the " +
+            "destination in one move";
 
         const status = this.gameStatus();
         console.log("get into layout render");
 
         return(
             <div>
-                {/*<Intro/>*/}
                 <Sidebar
                 sidebar={
                     <div>
-                        <b>Rank list</b>
+                        {/*<b>Rank list</b>*/}
                         <RankList totalStep={this.state.totalStep}/>
                     </div>
                 }
                 open={this.state.sidebarOpen}
-                onSetOpen={this.onSetSidebarOpen}
+                // onSetOpen={this.onSetSidebarOpen}
                 styles={{ sidebar: { background: "white" } }}>
                 {/*<button onClick={() => this.onSetSidebarOpen(true)}>*/}
-                {/*Rank List*/}
                 {/*</button>*/}
-                <h1 style={{ textAlign:'center'}}>{title}</h1>
-                <h3 className="instruction1">{instruction1}</h3>
-                <h3 className="instruction2">{instruction2}</h3>
-                <div className="game_status">{status}</div>
-                <p>Your total step: {this.state.totalStep}</p>
-                <p>There is a {Math.round((1-this.state.gamma)*100)} percent probability that
+                <h1 style={{textAlign:'center'}}>{title}</h1>
+                <h3 style={{paddingLeft: '50px'}} className="instruction1">{instruction1}</h3>
+                <h3 style={{paddingLeft: '50px'}} className="instruction2">{instruction2}</h3>
+                <div style={{paddingLeft: '50px'}} className="game_status">{status}</div>
+                <p style={{paddingLeft: '50px'}}>Your total step: {this.state.totalStep}</p>
+                <p style={{paddingLeft: '50px'}}>There is a {Math.round((1-this.state.gamma)*100)} percent probability that
                     your spaceship will crash in the next step!
                 </p>
-                <div>{this.state.crash && this.showCrashMessage()}</div>
+                {/*<div>{this.state.crash && this.showCrashMessage()}</div>*/}
                 <AddScore
                     score={this.state.score}
                 />
@@ -219,14 +230,16 @@ class Layout extends React.Component {
                     end_state_row={this.state.end_state_row}
                     end_state_col={this.state.end_state_col}
                 />
-                <p>The key(s) you pressed: {this.state.keyPressHist.map((data) => {
+                <p style={{paddingLeft:'50px'}}>The key(s) you pressed: {this.state.keyPressHist.map((data) => {
                     return <li>{data}</li>
                 })
                 }</p>
                 <audio id="negative_sound" src={negative_sound}/>
                 <audio id="positive_sound" src={positive_sound}/>
-                {/*<RankList totalStep={this.state.totalStep}/>*/}
-                {this.state.crash && <LogFile keyPressHist={this.state.keyPressHist}/>}
+                {this.state.crash &&
+                <LogFile keyPressHist={this.state.keyPressHist}/>
+                }
+                {this.state.crash && <Redirect to='/gameOver'/>}
                 </Sidebar>
 
             </div>
@@ -234,4 +247,4 @@ class Layout extends React.Component {
     }
 }
 
-export default Layout;
+export default GamePage;

@@ -5,7 +5,7 @@ class AddScore extends React.Component {
         const scoreColor = this.props.score <= 0 ? "red": "green";
 
         return (
-            <p>Your score is:
+            <p style={{paddingLeft: '50px'}}>Your score is:
                 <span style={{color: scoreColor}}> {this.props.score}</span></p>
         );
     }

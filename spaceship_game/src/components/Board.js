@@ -21,7 +21,7 @@ class Board extends React.Component{
         });
 
         return (
-            <div style={{ textAlign:'center'}}>
+            <div style={{ textAlign:'center', paddingLeft:'100px'}}>
                 <div style={{margin: 'auto', width:"40%"}}>
                     <table cellSpacing="0">
                         <tbody>

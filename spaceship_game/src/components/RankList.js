@@ -8,7 +8,7 @@ class RankList extends Component {
         return(
             this.props.totalStep > 0 && this.props.totalStep % 10 === 0 &&
             <div>
-                <h2 className="steps"> at total step of {this.props.totalStep}</h2>
+                <b className="steps"> at total step of {this.props.totalStep}</b>
 
                 {FakeData.map((data) =>{
                     return (
@@ -16,7 +16,7 @@ class RankList extends Component {
                             <ul style={{listStyleType: "none"}}>
                                 <li>{data.id}: {data.name} {data.score.map((scoreData, index) =>{
                                     if(index === ((this.props.totalStep/10) - 1))
-                                        return <div>{scoreData}</div>
+                                        return <span>{scoreData}</span>
                                     }
                                 )}</li>
                             </ul>

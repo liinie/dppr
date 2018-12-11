@@ -121,7 +121,7 @@ function checkValidServiceWorker(swUrl, config) {
     })
     .catch(() => {
       console.log(
-        'No internet connection found. Intro is running in offline mode.'
+        'No internet connection found. IntroPage is running in offline mode.'
       );
     });
 }

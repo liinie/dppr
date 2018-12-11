@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 // import logo from './logo.svg';
 import spaceShipLogo from './assets/spaceship.svg';
-import './Intro.css';
+import './IntroPage.css';
 import {Link} from 'react-router-dom';
 
-class Intro extends Component {
+class IntroPage extends Component {
   render() {
     return (
       <div className="App">
@@ -18,4 +18,4 @@ class Intro extends Component {
   }
 }
 
-export default Intro;
+export default IntroPage;

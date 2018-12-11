@@ -454,16 +454,13 @@ Sidebar.propTypes = {
 };
 
 Sidebar.defaultProps = {
-    // docked: false,
     docked:true,
     open: false,
-    // open:true,
     transitions: true,
     touch: true,
     touchHandleWidth: 20,
     pullRight: false,
     shadow: true,
-    // shadow:false,
     dragToggleDistance: 30,
     onSetOpen: () => {},
     styles: {},
