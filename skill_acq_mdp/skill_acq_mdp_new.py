@@ -9,11 +9,6 @@ import seaborn as sns
 import pandas as pd
 
 
-# def is_terminal(distance):
-#     if distance == 0:
-#         return True
-
-
 class Environment:
 
     """ The mdp is for the skill acquisition mdp and with objective level environment of space ship travel.
@@ -26,6 +21,7 @@ class Environment:
         self.goal = 20
         self.gamma = gamma
         self.actions = [1, 2]
+        self.nA = len(self.actions)
         self.total_distance = 10
         self.states = [(d, k1, k2)
                        for d in range(1, self.total_distance + 1)
@@ -83,7 +79,7 @@ class Environment:
                 else:
                     reward = -1
                 next_states[(d, 1, k2)] = [(1, reward)]
-                # print(f"next_state with action k2: {d, 1, k2}")
+                # print(f"next_state with action k1: {d, 1, k2}")
 
         elif action == self.actions[1]:
             # if skill 2 is not acquired
@@ -207,6 +203,39 @@ def policy_iteration(env):
             return policy, V
 
 
+def value_iteration(env, gamma, theta=1e-4):
+    def one_step_lookahead(state, V):
+        A = np.zeros(env.nA)
+        for a in range(env.nA):
+            next_states = env.step(state, env.actions[a])
+            for next_state, values in next_states.items():
+                for value in values:
+                    state_prob, reward = value
+                    A[a] += state_prob * (reward + gamma * V[next_state])
+        return A
+
+    V = {state: 0 for state in env.states}
+
+    while True:
+        delta = 0
+        for state in env.states:
+            A = one_step_lookahead(state, V)
+            best_action_value = np.max(A)
+            delta = max(delta, np.abs(best_action_value - V[state]))
+            V[state] = best_action_value
+        if delta < theta:
+            break
+
+    policy = {state: np.ones(env.nA) / env.nA for state in env.states}
+
+    for state in env.states:
+        A = one_step_lookahead(state, V)
+        best_action = np.argmax(A)
+        policy[state] = np.eye(env.nA)[best_action]
+
+    return policy, V
+
+
 def my_formular_vop(env):
     gamma = env.gamma
     g = env.goal
@@ -286,8 +315,10 @@ def roll_out(current_state, env, initial_state, policy, time_steps, crash_at, su
         # action = 1
         # print(f"actions taken for current state {current_state}: {action}")
         next_states = env.step(current_state, actions[action])
+        # values_list returns (state prob, reward, next state)
         values_list = []
 
+        # returns for the next step np, values contains state prob and reward
         for ns, values in next_states.items():
             # print(f"ns: {ns}, values: {values}")
             for value in values:
@@ -297,22 +328,26 @@ def roll_out(current_state, env, initial_state, policy, time_steps, crash_at, su
         state_prob_list = [v[0] for v, _ in values_list]
         next_state_list = [next_state for _, next_state in values_list]
 
-        # print(values_list)
-        # print(reward_list)
-        # print(state_prob_list)
-        # print(next_state_list)
+        # print(f"value_list: {values_list}")
+        # print(f"reward_list: {reward_list}")
+        # print(f"state_prob_list: {state_prob_list}")
+        # print(f"next_state_list: {next_state_list}")
 
-        chosen_reward = np.random.choice(reward_list, p=state_prob_list)
+        assert len(reward_list) == len(values_list) == len(state_prob_list) == len(next_state_list)
+
+        idx = np.random.choice(len(values_list), p=state_prob_list)
+        chosen_reward = values_list[idx][0][1]
         stepwise_return.append(chosen_reward)
         cumulative_return += chosen_reward
         cumulative_return_list.append(cumulative_return)
 
         # print(f"chosen reward: {chosen_reward}")
-        next_state = None
+        next_state = values_list[idx][1]
 
-        for cr, ns in zip(reward_list, next_state_list):
-            if cr == chosen_reward:
-                next_state = ns
+        # for cr, ns in zip(reward_list, next_state_list):
+        #     if cr == chosen_reward:
+        #         next_state = ns
+        # print(f"next_state: {next_state}")
 
         if current_state == initial_state:
             current_state = next_state
@@ -329,12 +364,10 @@ def roll_out(current_state, env, initial_state, policy, time_steps, crash_at, su
     return cumulative_return_list, stepwise_return, action_list
 
 
-def simulation(env, policies):
+def simulation(env, policies, time_steps, participant_num):
     # simulation
-    time_steps = 80
-    initial_state = (10, env.nS1, env.nS2)
+    initial_state = (env.total_distance, env.nS1, env.nS2)
     current_state = initial_state
-    participant_num = 1000
     fig, axs = plt.subplots(2, 2)
     best_scores = {}
 
@@ -381,6 +414,7 @@ def simulation(env, policies):
         axs[1, 0].set_title("crash at")
         axs[1, 1].hist(survival_at, alpha=0.5, rwidth=0.92, label=policy_name)
         axs[1, 1].set_title("survival at")
+
     plt.legend()
     plt.tight_layout()
     plt.show()
@@ -400,7 +434,10 @@ def plot_gamma_skill_values(policy_only_skill_1, policy_only_skill_2):
     fig, ax = plt.subplots()
     ax.plot(V1_initial, label="skill 1")
     ax.plot(V2_initial, label="skill 2")
-    ax.set_xticklabels([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+    ax.set_xlabel("$\gamma$")
+    ax.set_ylabel("State value at d=10")
+    ax.set_title("Value of learning for $\gamma = [0.1..0.9]$")
+    ax.set_xticklabels([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     plt.legend()
     plt.show()
 
@@ -451,7 +488,7 @@ def main():
 
     # plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
 
-    # simulation(env, policies)
+    simulation(env, policies, time_steps=10, participant_num=1000)
 
 
 if __name__ == '__main__':
