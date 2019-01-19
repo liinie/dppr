@@ -3,10 +3,10 @@ from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 import json
-from mpl_toolkits.mplot3d import Axes3D
+# from mpl_toolkits.mplot3d import Axes3D
 
-import seaborn as sns
-import pandas as pd
+# import seaborn as sns
+# import pandas as pd
 
 
 class Environment:
@@ -416,7 +416,7 @@ def simulation(env, policies, time_steps, participant_num):
         axs[1, 1].set_title("survival at")
 
     plt.legend()
-    plt.tight_layout()
+    fig.set_tight_layout(True)
     plt.show()
     with open('best_score_list.json', 'w') as fp:
         json.dump(best_scores, fp)
