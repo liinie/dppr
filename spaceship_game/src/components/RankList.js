@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import FakeData from '../fake_data'
+import FakeData from '../ranking_list'
 // import BestScores from './best_score_list'
 
 class RankList extends Component {
