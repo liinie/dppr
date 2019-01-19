@@ -446,6 +446,8 @@ def main():
     gamma = 0.94
     env = Environment(gamma)
 
+    total_distance = env.total_distance
+
     actions = env.actions
     states = env.states
 
@@ -486,7 +488,7 @@ def main():
 
     plot_gamma_skill_values(policy_only_skill_1, policy_only_skill_2)
 
-    # plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
+    plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
 
     simulation(env, policies, time_steps=10, participant_num=1000)
 
