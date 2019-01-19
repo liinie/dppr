@@ -96,7 +96,7 @@ class Environment:
                 # and reaching the destination.
                 reward = self.goal - 1
                 # reward = 2 * self.goal - 1
-                # d will be reset to a random number between 3 and total_distance, game reset
+                # d will be reset to the value of total_distance, game reset
                 d = self.reset_distance()
                 if (d, k1, 1) in next_states:
                     next_states[(d, k1, 1)].append((1.0/k2, reward))
@@ -111,7 +111,7 @@ class Environment:
                 # reward = 2 * self.goal - 1
 
                 # d = 0
-                # d will be reset to a random number between 3 and total_distance, game reset
+                # d will be reset to a random n and total_distance, game reset
                 d = self.reset_distance()
                 next_states[(d, k1, 1)] = [(1, reward)]
 
@@ -442,7 +442,41 @@ def plot_gamma_skill_values(policy_only_skill_1, policy_only_skill_2):
     plt.show()
 
 
+def expected_next_state_value(V, env):
+    actions = env.actions
+    states = env.states
+    Q = {}
+
+    for state in states:
+        d, k1, k2 = state
+
+        for action in actions:
+
+            q = 0
+
+            next_states = env.step(state, action)
+            for next_state, values in next_states.items():
+                for value in values:
+                    state_prob, reward = value
+                    q += state_prob * V[next_state]
+            Q[(d, k1, k2, action)] = q
+    return Q
+
+
+def parse_dict_key_to_string(optimal_V):
+    optimal_V_str = optimal_V.copy()
+    for key, value in optimal_V.items():
+        key_str = str(key)
+        optimal_V_str[key_str] = value
+        optimal_V_str.pop(key)
+    return optimal_V_str
+
+
+
+
 def main():
+
+    # parameters from the Environment#####################################
     gamma = 0.94
     env = Environment(gamma)
 
@@ -450,20 +484,42 @@ def main():
 
     actions = env.actions
     states = env.states
+    #########################################################################
 
+    # get optimal policy, optimal state value and the policies when using only skill 1 or skill 2 respectively
     optimal_policy, optimal_V = policy_iteration(env)
     policy_only_skill_1 = {state: np.array([1, 0]) for state in states}
     policy_only_skill_2 = {state: np.array([0, 1]) for state in states}
 
-    print(optimal_V)
+    print("optimal value: {}".format(optimal_V))
     # print(f"optimal policy: {optimal_policy}")
+    ############################################################################
+
+    # parse dictionar key to string and save to optimal_state_value json file for the exportation to javascript
+    optimal_V_str = parse_dict_key_to_string(optimal_V)
+
+    with open('optimal_state_value', 'w') as fp:
+        json.dump(optimal_V_str, fp)
 
     policies = {"optimal_policy": optimal_policy,
                 "policy_only_skill_1": policy_only_skill_1,
                 "policy_only_skill_2": policy_only_skill_2}
+    ###########################################################################
 
+    # plot comparison of the analytical result of vop and the result from dynamic programming, the expected result
+    # should be a line of dots
     my_vop = my_formular_vop(env)
+    plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
+    ########################################################################################
 
+    # print expected next state action value:
+    Q = expected_next_state_value(optimal_V, env)
+    Q_str = parse_dict_key_to_string(Q)
+    with open('expected_next_state_action_value', 'w') as fp:
+        json.dump(Q_str, fp)
+    ########################################################################################
+
+    # plot heatmap of showing when it is better to use skill 1 rather than skill 2
     Z = np.zeros((10, 10))
     k1 = env.nS1
     k2 = env.nS2
@@ -486,12 +542,16 @@ def main():
     # ax.set_ytickslabels(np.linspace(0.05, 0.95, 10))
     plt.colorbar()
     plt.show()
+    #########################################################################################
 
+    # plot the value of learning skill 1 or skill 2 for gamma = [0.1, ..., 0.9]
     plot_gamma_skill_values(policy_only_skill_1, policy_only_skill_2)
+    #######################################################################################
 
-    plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
-
+    # plot the simulated stepwise returns, cumulative returns,
+    # and the crash rate/ survival rate at distance from 0 to 9
     simulation(env, policies, time_steps=10, participant_num=1000)
+    ####################################################################################
 
 
 if __name__ == '__main__':
