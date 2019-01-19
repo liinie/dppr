@@ -48,7 +48,7 @@ class Environment:
                 # and reward = -1
                 reward = -1
 
-                next_state = (1 - (1 / k1), reward)
+                next_state = (1.0 - (1.0 / k1), reward)
                 next_states[(d, k1 - 1, k2)].append(next_state)
                 # print(f"next_state with action k1: {d, k1-1, k2}")
 
@@ -60,9 +60,9 @@ class Environment:
                     # reset the game environment
                     d = self.reset_distance()
                 if (d, 1, k2) in next_states:
-                    next_states[(d, 1, k2)].append((1/k1, reward))
+                    next_states[(d, 1, k2)].append((1.0/k1, reward))
                 else:
-                    next_states[(d, 1, k2)] = [(1/k1, reward)]
+                    next_states[(d, 1, k2)] = [(1.0/k1, reward)]
 
                 # print(f"next_state with action k1: {d, 1, k2}")
 
@@ -87,9 +87,9 @@ class Environment:
                 # if getting error when trying skill 2, the player would get reward -1
                 reward = -1
                 if (d, k1, k2 - 1) in next_states:
-                    next_states[(d, k1, k2 - 1)].append((1 - (1/k2), reward))
+                    next_states[(d, k1, k2 - 1)].append((1.0 - (1.0/k2), reward))
                 else:
-                    next_states[(d, k1, k2 - 1)] = [(1 - (1/k2), reward)]
+                    next_states[(d, k1, k2 - 1)] = [(1.0 - (1.0/k2), reward)]
                 # print(f"next_state with action k2: {d, k1, k2-1}")
 
                 # if getting the right key of skill 2, the player would get reward goal - 1
@@ -99,9 +99,9 @@ class Environment:
                 # d will be reset to a random number between 3 and total_distance, game reset
                 d = self.reset_distance()
                 if (d, k1, 1) in next_states:
-                    next_states[(d, k1, 1)].append((1/k2, reward))
+                    next_states[(d, k1, 1)].append((1.0/k2, reward))
                 else:
-                    next_states[(d, k1, 1)] = [(1/k2, reward)]
+                    next_states[(d, k1, 1)] = [(1.0/k2, reward)]
                 # print(f"next_state with action k2: {d, k1, 1}")
 
 
@@ -250,14 +250,14 @@ def my_formular_vop(env):
             for i in range(1, k2):
                 m = 1
                 for j in range(i):
-                    m *= (1 - (1/(k2 - j)))
+                    m *= (1.0 - (1.0/(k2 - j)))
                 v += np.power(gamma, i) *\
-                    ((-k2 + i + k2*gamma - i*gamma - gamma + g)/((k2 - i)*(1 - gamma)))* m
-            my_vop[(d, k1, k2)] = v + (g - 1)/(k2*(1 - gamma)) - 1 + 1/k2
+                    ((-k2 + i + k2*gamma - i*gamma - gamma + g)/((k2 - i)*(1.0 - gamma)))* m
+            my_vop[(d, k1, k2)] = v + (g - 1.0)/(k2*(1.0 - gamma)) - 1.0 + 1.0/k2
 
         else:
             assert k2 == 1
-            my_vop[(d, k1, k2)] = (g - 1)/(k2*(1 - gamma)) -1 + 1/k2
+            my_vop[(d, k1, k2)] = (g - 1.0)/(k2*(1.0 - gamma)) -1.0 + 1.0/k2
 
     return my_vop
 #
@@ -285,17 +285,17 @@ def plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance):
         if d == total_distance and k1 == 1:
             action_values = one_step_lookahead(state, optimal_V, env)
             # print(f"optimal_v at state{d, k1, k2}: {optimal_V[(d, k1, k2)]}")
-            print(f"action_values at state {d, k1, k2}: {action_values}")
+            print("action_values at state ({}, {}, {}): {}".format(d, k1, k2, action_values))
             # print(f"vop at state{d, k1, k2}: {Vop[(d, k1, k2)]}")
-            print(f"my_vop at state {d, k1, k2}: {my_vop[(d, k1, k2)]}")
+            print("my_vop at state ({}, {}, {}): {}".format(d, k1, k2, my_vop[(d, k1, k2)]))
             print("\n")
             y1.append(optimal_V[state])
             y2.append(action_values[1])
             y3.append(my_vop[state])
     assert len(y2) == len(y3)
     axs.scatter(y2, y3, label="action values of k2", alpha=0.5)
-    axs.set_xlabel(f"action states value DP:(d={d}, k1={k1}, k2=(1, ... 26))")
-    axs.set_ylabel(f"new VOP state value : (d={d}, k1={k1}, k2=(1, ... 26))")
+    axs.set_xlabel("action states value DP:(d={}, k1={}, k2=(1, ... 26))".format(d, k1))
+    axs.set_ylabel("new VOP state value : (d={}, k1={}, k2=(1, ... 26))".format(d, k1))
     plt.title("comparison of vop and optimal state value from DP")
     plt.legend(loc="upper left")
     plt.show()
@@ -353,7 +353,7 @@ def roll_out(current_state, env, initial_state, policy, time_steps, crash_at, su
             current_state = next_state
             survival_at.append(i)
         else:
-            crash = np.random.choice([True, False], p=[1 - gamma, gamma])
+            crash = np.random.choice([True, False], p=[1.0 - gamma, gamma])
             if crash:
                 crash_at.append(i)
                 break
