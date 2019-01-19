@@ -455,6 +455,7 @@ def main():
     policy_only_skill_1 = {state: np.array([1, 0]) for state in states}
     policy_only_skill_2 = {state: np.array([0, 1]) for state in states}
 
+    print(optimal_V)
     # print(f"optimal policy: {optimal_policy}")
 
     policies = {"optimal_policy": optimal_policy,
