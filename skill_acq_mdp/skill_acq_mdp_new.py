@@ -3,6 +3,10 @@ from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+
+import seaborn as sns
+
+
 # from mpl_toolkits.mplot3d import Axes3D
 
 # import seaborn as sns
@@ -10,7 +14,6 @@ import json
 
 
 class Environment:
-
     """ The mdp is for the skill acquisition mdp and with objective level environment of space ship travel.
     The space ship game environment has to be episodic, or else, it makes no sense, because one can't travel away
     from the destination"""
@@ -60,9 +63,9 @@ class Environment:
                     # reset the game environment
                     d = self.reset_distance()
                 if (d, 1, k2) in next_states:
-                    next_states[(d, 1, k2)].append((1.0/k1, reward))
+                    next_states[(d, 1, k2)].append((1.0 / k1, reward))
                 else:
-                    next_states[(d, 1, k2)] = [(1.0/k1, reward)]
+                    next_states[(d, 1, k2)] = [(1.0 / k1, reward)]
 
                 # print(f"next_state with action k1: {d, 1, k2}")
 
@@ -87,9 +90,9 @@ class Environment:
                 # if getting error when trying skill 2, the player would get reward -1
                 reward = -1
                 if (d, k1, k2 - 1) in next_states:
-                    next_states[(d, k1, k2 - 1)].append((1.0 - (1.0/k2), reward))
+                    next_states[(d, k1, k2 - 1)].append((1.0 - (1.0 / k2), reward))
                 else:
-                    next_states[(d, k1, k2 - 1)] = [(1.0 - (1.0/k2), reward)]
+                    next_states[(d, k1, k2 - 1)] = [(1.0 - (1.0 / k2), reward)]
                 # print(f"next_state with action k2: {d, k1, k2-1}")
 
                 # if getting the right key of skill 2, the player would get reward goal - 1
@@ -99,9 +102,9 @@ class Environment:
                 # d will be reset to the value of total_distance, game reset
                 d = self.reset_distance()
                 if (d, k1, 1) in next_states:
-                    next_states[(d, k1, 1)].append((1.0/k2, reward))
+                    next_states[(d, k1, 1)].append((1.0 / k2, reward))
                 else:
-                    next_states[(d, k1, 1)] = [(1.0/k2, reward)]
+                    next_states[(d, k1, 1)] = [(1.0 / k2, reward)]
                 # print(f"next_state with action k2: {d, k1, 1}")
 
 
@@ -120,7 +123,6 @@ class Environment:
 
 # return the converged value function of given policy
 def policy_evaluation(policy, env):
-
     gamma = env.gamma
     states = env.states
     actions = env.actions
@@ -172,11 +174,10 @@ def one_step_lookahead(state, V, env):
 
 
 def policy_iteration(env):
-
     actions = env.actions
     states = env.states
 
-    policy = {state: np.ones(len(actions))/len(actions) for state in states}
+    policy = {state: np.ones(len(actions)) / len(actions) for state in states}
 
     while True:
 
@@ -250,16 +251,18 @@ def my_formular_vop(env):
             for i in range(1, k2):
                 m = 1
                 for j in range(i):
-                    m *= (1.0 - (1.0/(k2 - j)))
-                v += np.power(gamma, i) *\
-                    ((-k2 + i + k2*gamma - i*gamma - gamma + g)/((k2 - i)*(1.0 - gamma)))* m
-            my_vop[(d, k1, k2)] = v + (g - 1.0)/(k2*(1.0 - gamma)) - 1.0 + 1.0/k2
+                    m *= (1.0 - (1.0 / (k2 - j)))
+                v += np.power(gamma, i) * \
+                     ((-k2 + i + k2 * gamma - i * gamma - gamma + g) / ((k2 - i) * (1.0 - gamma))) * m
+            my_vop[(d, k1, k2)] = v + (g - 1.0) / (k2 * (1.0 - gamma)) - 1.0 + 1.0 / k2
 
         else:
             assert k2 == 1
-            my_vop[(d, k1, k2)] = (g - 1.0)/(k2*(1.0 - gamma)) -1.0 + 1.0/k2
+            my_vop[(d, k1, k2)] = (g - 1.0) / (k2 * (1.0 - gamma)) - 1.0 + 1.0 / k2
 
     return my_vop
+
+
 #
 #
 # def reshape_v(v, env):
@@ -294,9 +297,9 @@ def plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance):
             y3.append(my_vop[state])
     assert len(y2) == len(y3)
     axs.scatter(y2, y3, label="action values of k2", alpha=0.5)
-    axs.set_xlabel("action states value DP:(d={}, k1={}, k2=(1, ... 26))".format(d, k1))
-    axs.set_ylabel("new VOP state value : (d={}, k1={}, k2=(1, ... 26))".format(d, k1))
-    plt.title("comparison of vop and optimal state value from DP")
+    axs.set_xlabel("Action states value DP:(d={}, k1={}, k2=(1, ... 26))".format(d, k1))
+    axs.set_ylabel("New VOP state value : (d={}, k1={}, k2=(1, ... 26))".format(d, k1))
+    plt.title("Comparison of vop and optimal state value from DP")
     plt.legend(loc="upper left")
     plt.show()
 
@@ -410,34 +413,54 @@ def simulation(env, policies, time_steps, participant_num):
         axs[0, 1].fill_between(x, np.percentile(cumulative_return_arr, 25, axis=0),
                                np.percentile(cumulative_return_arr, 75, axis=0), alpha=0.2)
 
-        axs[1, 0].hist(crash_at, alpha=0.5, rwidth=0.92, label=policy_name)
-        axs[1, 0].set_title("crash at")
-        axs[1, 1].hist(survival_at, alpha=0.5, rwidth=0.92, label=policy_name)
-        axs[1, 1].set_title("survival at")
+        bins = get_integer_bins(crash_at)
+        axs[1, 0].hist(crash_at, bins=bins,
+                       alpha=0.5, rwidth=0.92, label=policy_name)
+        axs[1, 0].set_title("Crash at")
+        axs[1, 0].set_xticks(np.arange(len(bins)))
 
-    plt.legend()
+        bins = get_integer_bins(survival_at)
+        axs[1, 1].hist(survival_at, bins=bins, alpha=0.5, rwidth=0.92, label=policy_name)
+        axs[1, 1].set_title("Survival at")
+        axs[1, 1].set_xticks(np.arange(len(bins)))
+
+    axs[1, 1].legend(loc='lower left')
     fig.set_tight_layout(True)
     plt.show()
     with open('best_score_list.json', 'w') as fp:
         json.dump(best_scores, fp)
 
 
+def get_integer_bins(data):
+    min_data = int(np.min(data))
+    max_data = int(np.max(data))
+    bins = np.arange(min_data, max_data + 2) - 0.5
+    return bins
+
+
 def plot_gamma_skill_values(policy_only_skill_1, policy_only_skill_2):
     V1_initial = []
     V2_initial = []
-    for gamma in np.linspace(0.1, 0.9, 9):
+    gammas = np.linspace(0.05, 0.95, 10)
+    for gamma in gammas:
         env = Environment(gamma)
         V1 = policy_evaluation(policy_only_skill_1, env)
         V2 = policy_evaluation(policy_only_skill_2, env)
         V1_initial.append(V1[(env.total_distance, env.nS1, env.nS2)])
         V2_initial.append(V2[(env.total_distance, env.nS1, env.nS2)])
     fig, ax = plt.subplots()
-    ax.plot(V1_initial, label="skill 1")
-    ax.plot(V2_initial, label="skill 2")
-    ax.set_xlabel("$\gamma$")
+    assert np.shape(V1_initial) == np.shape(V2_initial) == np.shape(gammas)
+    ax.plot(gammas, V1_initial, label="skill 1")
+    ax.plot(gammas, V2_initial, label="skill 2")
+    ax.set_xlabel("$\\gamma$")
     ax.set_ylabel("State value at d=10")
-    ax.set_title("Value of learning for $\gamma = [0.1..0.9]$")
-    ax.set_xticklabels([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+    title = ("Value of learning for "
+             "$\\gamma \\in "
+             "[{mingamma}, {maxgamma}]$".format(mingamma=np.min(gammas),
+                                                maxgamma=np.max(gammas)))
+    ax.set_title(title)
+    ax.set_xticks(gammas)
+    fig.tight_layout()
     plt.legend()
     plt.show()
 
@@ -472,10 +495,7 @@ def parse_dict_key_to_string(optimal_V):
     return optimal_V_str
 
 
-
-
 def main():
-
     # parameters from the Environment#####################################
     gamma = 0.94
     env = Environment(gamma)
@@ -509,7 +529,7 @@ def main():
     # plot comparison of the analytical result of vop and the result from dynamic programming, the expected result
     # should be a line of dots
     my_vop = my_formular_vop(env)
-    plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
+    # plot_comparison_vop_dp(env, my_vop, optimal_V, states, total_distance)
     ########################################################################################
 
     # print expected next state action value:
@@ -524,24 +544,46 @@ def main():
     k1 = env.nS1
     k2 = env.nS2
 
-    fig, ax = plt.subplots()
-
-    for i, gamma in enumerate(np.linspace(0.05, 0.95, 10)):
+    gammas = np.linspace(0.05, 0.95, 10)
+    distances = list(reversed(range(1, 11)))
+    for i, gamma in enumerate(gammas):
         env = Environment(gamma)
 
         V1 = policy_evaluation(policy_only_skill_1, env)
         V2 = policy_evaluation(policy_only_skill_2, env)
 
-        for j, d in enumerate(reversed(range(1, 11))):
-            Z[i, j] = V1[(d, k1, k2)] - V2[(d, k1, k2)]
+        for j, d in enumerate(distances):
+            Z[i, j] = V2[(d, k1, k2)] - V1[(d, k1, k2)]
 
-    plt.imshow(Z)
-    plt.xlabel("Distance")
-    # ax.set_xticklabels(list(reversed(range(1, 11))))
-    plt.ylabel("Gamma")
-    # ax.set_ytickslabels(np.linspace(0.05, 0.95, 10))
-    plt.colorbar()
+    fig, ax = plt.subplots()
+    yticklabels = ['{:.2}'.format(gamma) for gamma in gammas]
+
+    vmin = np.min(Z)
+    vmax = -vmin  # Make sure that the colors are interesting
+
+    sns.heatmap(Z, annot=True,
+                cmap='Spectral',
+                vmin=vmin,
+                vmax=vmax,
+                fmt='.3g',
+                center=0.0,
+                xticklabels=distances,
+                yticklabels=yticklabels,
+                ax=ax, cbar=True)
+
+    ax.set_title('How much better is skill 2 than skill 1')
+
+    ax.set_xlabel("Distance")
+    # ax.set_xticks(np.arange(len(distances)))
+    # ax.set_xticklabels(list(distances))
+
+    ax.set_ylabel("Gamma")
+    # ax.set_yticks(np.arange(len(gammas)))
+    # ax.set_yticklabels(['{:.2}'.format(gamma) for gamma in gammas])
+    # fig.colorbar(cax, label='Relative value difference ($V_2 - V_1$)')
     plt.show()
+    plt.close(fig)
+
     #########################################################################################
 
     # plot the value of learning skill 1 or skill 2 for gamma = [0.1, ..., 0.9]
